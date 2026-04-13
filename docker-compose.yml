@@ -8,7 +8,7 @@ services:
     environment:
       - VPN_SERVICE_PROVIDER=protonvpn
       - VPN_TYPE=wireguard
-      - WIREGUARD_PRIVATE_KEY=kOIOt4sYP0MoeaY3MtTxgobS1zECS3CxmxL9oIoJtXE=
+      - WIREGUARD_PRIVATE_KEY=KG1iYuhWobnTlLIFmtZP+sQbj2qUudiK5XXrR2sX92Q=
       - SERVER_COUNTRIES=Netherlands
       - FREE_ONLY=false
       - VPN_PORT_FORWARDING=on
