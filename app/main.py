@@ -370,25 +370,22 @@ async def register_on_tracker(item: dict, torrent_hash: str, torrent_path: str, 
 _last_synced_port = {"port": None}
 
 async def port_sync_loop():
-    """Background task: get forwarded port from Gluetun API and update qBit listening port."""
+    """Background task: read Gluetun forwarded port file and update qBit listening port."""
     import logging
     log = logging.getLogger("uvicorn.error")
-    await asyncio.sleep(15)  # Wait for everything to start
+    await asyncio.sleep(20)  # Wait for VPN + qBit to start
     while True:
         try:
-            # Get forwarded port from Gluetun control API (shares network namespace)
-            async with aiohttp.ClientSession() as session:
-                async with session.get("http://localhost:8000/v1/openvpn/portforwarded", timeout=aiohttp.ClientTimeout(total=5)) as resp:
-                    data = await resp.json()
-                    new_port = str(data.get("port", 0))
-
-            if new_port and new_port != "0" and new_port != _last_synced_port["port"]:
-                import qbittorrentapi
-                client = qbittorrentapi.Client(host=CONFIG["qbit_url"], username=CONFIG["qbit_user"], password=CONFIG["qbit_pass"])
-                client.auth_log_in()
-                client.app_set_preferences(prefs={"listen_port": int(new_port)})
-                _last_synced_port["port"] = new_port
-                log.info(f"[port-sync] qBit listening port set to {new_port}")
+            port_file = Path("/gluetun-tmp/forwarded_port")
+            if port_file.exists():
+                new_port = port_file.read_text().strip()
+                if new_port and new_port != "0" and new_port != _last_synced_port["port"]:
+                    import qbittorrentapi
+                    client = qbittorrentapi.Client(host=CONFIG["qbit_url"], username=CONFIG["qbit_user"], password=CONFIG["qbit_pass"])
+                    client.auth_log_in()
+                    client.app_set_preferences(prefs={"listen_port": int(new_port)})
+                    _last_synced_port["port"] = new_port
+                    log.info(f"[port-sync] qBit listening port set to {new_port}")
         except Exception as e:
             import logging
             logging.getLogger("uvicorn.error").warning(f"[port-sync] Failed: {e}")
