@@ -1,0 +1,68 @@
+services:
+  vpn:
+    image: qmcgaw/gluetun
+    container_name: echelon-vpn
+    cap_add: [NET_ADMIN]
+    environment:
+      - VPN_SERVICE_PROVIDER=ipvanish
+      - VPN_TYPE=openvpn
+      - OPENVPN_USER=${VPN_USER}
+      - OPENVPN_PASSWORD=${VPN_PASS}
+      - SERVER_COUNTRIES=${VPN_COUNTRY:-Netherlands}
+    ports:
+      - "${QBIT_PORT:-8080}:8080"
+      - "${DASHBOARD_PORT:-9090}:9090"
+    volumes:
+      - ./data/gluetun:/gluetun
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: echelon-qbit
+    network_mode: service:vpn
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - WEBUI_PORT=8080
+    volumes:
+      - ./data/qbit:/config
+      - ${MOVIES_PATH:-./data/media/movies}:/media/movies:ro
+      - ${SHOWS_PATH:-./data/media/shows}:/media/shows:ro
+      - ${ANIME_PATH:-./data/media/anime}:/media/anime:ro
+      - ./data/torrents:/torrents
+    restart: unless-stopped
+    depends_on:
+      vpn:
+        condition: service_healthy
+
+  scanner:
+    build: .
+    container_name: echelon-scanner
+    network_mode: service:vpn
+    environment:
+      - TRACKER_URL=${TRACKER_URL:-https://echelonhd.me}
+      - TRACKER_PASSKEY=${TRACKER_PASSKEY}
+      - TRACKER_API_ENDPOINT=${TRACKER_API_ENDPOINT:-https://echelonhd.me/upload-manager.php}
+      - TRACKER_API_PASSWORD=${TRACKER_API_PASSWORD}
+      - TMDB_API_KEY=${TMDB_API_KEY:-93889655f8028098b115e8aa5e3f4414}
+      - QBIT_URL=http://localhost:8080
+      - QBIT_USER=${QBIT_USER:-admin}
+      - QBIT_PASS=${QBIT_PASS:-adminadmin}
+      - SCAN_INTERVAL=${SCAN_INTERVAL:-0}
+      - DB_PATH=/data/scanner.db
+    volumes:
+      - ${MOVIES_PATH:-./data/media/movies}:/media/movies:ro
+      - ${SHOWS_PATH:-./data/media/shows}:/media/shows:ro
+      - ${ANIME_PATH:-./data/media/anime}:/media/anime:ro
+      - ./data/torrents:/torrents
+      - ./data:/data
+    restart: unless-stopped
+    depends_on:
+      - vpn
+      - qbittorrent

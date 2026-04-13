@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchelonHD Scanner</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#0f0f0f; color:#eaeaea; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; min-height:100vh; }
+
+        .nav { background:#1a1a2e; border-bottom:1px solid #2a2a4a; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
+        .nav h1 { font-size:18px; font-weight:800; color:#e94560; letter-spacing:1px; }
+        .nav__status { display:flex; gap:12px; align-items:center; }
+        .nav__dot { width:8px; height:8px; border-radius:50%; }
+        .nav__dot--green { background:#00d26a; }
+        .nav__dot--red { background:#e94560; }
+
+        .container { max-width:1400px; margin:0 auto; padding:24px; }
+
+        /* Stats Cards */
+        .stats { display:grid; grid-template-columns:repeat(5, 1fr); gap:16px; margin-bottom:24px; }
+        .stat { background:#1a1a2e; border:1px solid #2a2a4a; border-radius:14px; padding:20px; }
+        .stat__value { font-size:28px; font-weight:800; }
+        .stat__label { color:#4a4a6a; font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
+        .stat__icon { float:right; width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+
+        /* Library Cards */
+        .library { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:24px; }
+        .lib-card { background:#1a1a2e; border:1px solid #2a2a4a; border-radius:14px; padding:20px; display:flex; align-items:center; gap:16px; }
+        .lib-card__icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; }
+        .lib-card__count { font-size:24px; font-weight:800; }
+        .lib-card__label { color:#4a4a6a; font-size:12px; }
+
+        /* Scan Button */
+        .scan-section { background:#1a1a2e; border:1px solid #2a2a4a; border-radius:14px; padding:20px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center; }
+        .scan-btn { padding:12px 32px; background:linear-gradient(135deg,#e94560,#c73050); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; }
+        .scan-btn:hover { background:linear-gradient(135deg,#ff5a78,#e94560); }
+        .scan-btn:disabled { background:#2a2a4a; cursor:not-allowed; color:#4a4a6a; }
+        .scan-progress { flex:1; margin:0 24px; }
+        .scan-bar { height:8px; background:#2a2a4a; border-radius:4px; overflow:hidden; }
+        .scan-bar__fill { height:100%; background:linear-gradient(90deg,#e94560,#ffc107,#00d26a); transition:width 0.3s; border-radius:4px; }
+        .scan-info { color:#4a4a6a; font-size:12px; margin-top:6px; }
+
+        /* Recent Activity */
+        .card { background:#1a1a2e; border:1px solid #2a2a4a; border-radius:14px; overflow:hidden; margin-bottom:24px; }
+        .card__hdr { padding:14px 20px; border-bottom:1px solid #2a2a4a; font-size:14px; font-weight:700; display:flex; justify-content:space-between; align-items:center; }
+        .card__hdr i { color:#4a4a6a; margin-right:6px; }
+        table { width:100%; border-collapse:collapse; }
+        th { padding:10px 16px; background:#16213e; color:#8a8a8a; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; text-align:left; border-bottom:1px solid #2a2a4a; }
+        td { padding:10px 16px; border-bottom:1px solid rgba(42,42,74,0.3); color:#c0c0c0; font-size:13px; }
+        tr:hover { background:rgba(233,69,96,0.02); }
+        .badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; }
+        .badge--uploaded { background:rgba(0,210,106,0.1); color:#00d26a; }
+        .badge--error { background:rgba(233,69,96,0.1); color:#e94560; }
+        .badge--scanned { background:rgba(74,144,217,0.1); color:#4a90d9; }
+        .badge--processing { background:rgba(255,193,7,0.1); color:#ffc107; }
+
+        /* Logs */
+        .log-entry { padding:8px 16px; border-bottom:1px solid rgba(42,42,74,0.2); font-size:12px; font-family:monospace; }
+        .log-entry--info { color:#8a8a8a; }
+        .log-entry--success { color:#00d26a; }
+        .log-entry--error { color:#e94560; }
+        .log-time { color:#3a3a5a; margin-right:8px; }
+
+        .empty { text-align:center; padding:40px; color:#3a3a5a; }
+        .empty i { font-size:36px; margin-bottom:8px; display:block; }
+
+        .two-col { display:grid; grid-template-columns:2fr 1fr; gap:24px; }
+
+        @media (max-width: 768px) {
+            .stats { grid-template-columns:repeat(2, 1fr); }
+            .library { grid-template-columns:1fr; }
+            .two-col { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <h1><i class="fas fa-satellite-dish"></i> ECHELONHD SCANNER</h1>
+        <div class="nav__status">
+            <span class="nav__dot nav__dot--green" id="vpnDot"></span>
+            <span style="color:#8a8a8a; font-size:12px;" id="vpnLabel">VPN Connected</span>
+            <span class="nav__dot" id="qbitDot" style="background:#4a4a6a;"></span>
+            <span style="color:#8a8a8a; font-size:12px;" id="qbitLabel">qBit</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat">
+                <div class="stat__icon" style="background:rgba(74,144,217,0.1); color:#4a90d9;"><i class="fas fa-database"></i></div>
+                <div class="stat__value" style="color:#4a90d9;">{{ total_items }}</div>
+                <div class="stat__label">Total Scanned</div>
+            </div>
+            <div class="stat">
+                <div class="stat__icon" style="background:rgba(0,210,106,0.1); color:#00d26a;"><i class="fas fa-check-circle"></i></div>
+                <div class="stat__value" style="color:#00d26a;">{{ uploaded }}</div>
+                <div class="stat__label">Uploaded</div>
+            </div>
+            <div class="stat">
+                <div class="stat__icon" style="background:rgba(255,193,7,0.1); color:#ffc107;"><i class="fas fa-clock"></i></div>
+                <div class="stat__value" style="color:#ffc107;">{{ pending }}</div>
+                <div class="stat__label">Pending</div>
+            </div>
+            <div class="stat">
+                <div class="stat__icon" style="background:rgba(233,69,96,0.1); color:#e94560;"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat__value" style="color:#e94560;">{{ errors }}</div>
+                <div class="stat__label">Errors</div>
+            </div>
+            <div class="stat">
+                <div class="stat__icon" style="background:rgba(168,139,250,0.1); color:#a78bfa;"><i class="fas fa-hard-drive"></i></div>
+                <div class="stat__value" style="color:#a78bfa;">{{ "%.1f"|format(total_size / 1073741824) }} GB</div>
+                <div class="stat__label">Total Size</div>
+            </div>
+        </div>
+
+        <!-- Library Overview -->
+        <div class="library">
+            <div class="lib-card">
+                <div class="lib-card__icon" style="background:rgba(233,69,96,0.1); color:#e94560;"><i class="fas fa-film"></i></div>
+                <div>
+                    <div class="lib-card__count">{{ library_stats.get('movies', 0) }}</div>
+                    <div class="lib-card__label">Movies</div>
+                </div>
+            </div>
+            <div class="lib-card">
+                <div class="lib-card__icon" style="background:rgba(74,144,217,0.1); color:#4a90d9;"><i class="fas fa-tv"></i></div>
+                <div>
+                    <div class="lib-card__count">{{ library_stats.get('shows', 0) }}</div>
+                    <div class="lib-card__label">TV Shows</div>
+                </div>
+            </div>
+            <div class="lib-card">
+                <div class="lib-card__icon" style="background:rgba(255,193,7,0.1); color:#ffc107;"><i class="fas fa-dragon"></i></div>
+                <div>
+                    <div class="lib-card__count">{{ library_stats.get('anime', 0) }}</div>
+                    <div class="lib-card__label">Anime</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scan Control -->
+        <div class="scan-section">
+            <div>
+                <div style="font-size:16px; font-weight:700; margin-bottom:4px;">Library Scanner</div>
+                <div style="color:#4a4a6a; font-size:12px;">
+                    {% if last_scan %}Last scan: {{ last_scan }}{% else %}Never scanned{% endif %}
+                </div>
+            </div>
+            <div class="scan-progress" id="scanProgress" style="display:{% if scan_state.running %}block{% else %}none{% endif %};">
+                <div class="scan-bar"><div class="scan-bar__fill" id="scanBar" style="width:{% if scan_state.total > 0 %}{{ (scan_state.progress / scan_state.total * 100)|int }}%{% else %}0%{% endif %};"></div></div>
+                <div class="scan-info" id="scanInfo">{{ scan_state.current }}</div>
+            </div>
+            <button class="scan-btn" id="scanBtn" onclick="startScan()" {% if scan_state.running %}disabled{% endif %}>
+                <i class="fas fa-{% if scan_state.running %}spinner fa-spin{% else %}radar{% endif %}"></i>
+                {% if scan_state.running %}Scanning...{% else %}Start Scan{% endif %}
+            </button>
+        </div>
+
+        <div class="two-col">
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card__hdr"><span><i class="fas fa-list"></i> Recent Activity</span></div>
+                {% if recent %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Size</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in recent %}
+                        <tr>
+                            <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                <div style="color:#eaeaea; font-weight:600;">{{ item.title }}</div>
+                                <div style="color:#3a3a5a; font-size:10px;">{{ item.year or '' }} &middot; {{ item.resolution }}</div>
+                            </td>
+                            <td>
+                                {% if item.category == 'movies' %}<span style="color:#e94560;">Movies</span>
+                                {% elif item.category == 'shows' %}<span style="color:#4a90d9;">TV</span>
+                                {% else %}<span style="color:#ffc107;">Anime</span>{% endif %}
+                            </td>
+                            <td style="white-space:nowrap;">{{ "%.2f"|format(item.size / 1073741824) }} GB</td>
+                            <td>
+                                <span class="badge badge--{{ item.status }}">{{ item.status|capitalize }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty"><i class="fas fa-inbox"></i><p>No items scanned yet. Click "Start Scan" to begin.</p></div>
+                {% endif %}
+            </div>
+
+            <!-- Logs -->
+            <div class="card">
+                <div class="card__hdr"><span><i class="fas fa-terminal"></i> Logs</span></div>
+                {% if logs %}
+                {% for log in logs %}
+                <div class="log-entry log-entry--{{ log.level }}">
+                    <span class="log-time">{{ log.created_at }}</span>
+                    {{ log.message }}
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="empty"><i class="fas fa-terminal"></i><p>No logs yet.</p></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function startScan() {
+            const btn = document.getElementById('scanBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning...';
+            document.getElementById('scanProgress').style.display = 'block';
+
+            await fetch('/api/scan', { method: 'POST' });
+            pollScanStatus();
+        }
+
+        async function pollScanStatus() {
+            const resp = await fetch('/api/scan/status');
+            const data = await resp.json();
+
+            if (data.running) {
+                const pct = data.total > 0 ? Math.round((data.progress / data.total) * 100) : 0;
+                document.getElementById('scanBar').style.width = pct + '%';
+                document.getElementById('scanInfo').textContent = data.current + ' (' + data.progress + '/' + data.total + ')';
+                setTimeout(pollScanStatus, 2000);
+            } else {
+                document.getElementById('scanBtn').disabled = false;
+                document.getElementById('scanBtn').innerHTML = '<i class="fas fa-radar"></i> Start Scan';
+                document.getElementById('scanInfo').textContent = 'Scan complete!';
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+
+        // Check qBit status
+        async function checkStatus() {
+            try {
+                const resp = await fetch('/api/stats');
+                const data = await resp.json();
+                const qbitDot = document.getElementById('qbitDot');
+                const qbitLabel = document.getElementById('qbitLabel');
+                if (data.qbit.online) {
+                    qbitDot.style.background = '#00d26a';
+                    qbitLabel.textContent = 'qBit: ' + data.qbit.torrents + ' torrents';
+                } else {
+                    qbitDot.style.background = '#e94560';
+                    qbitLabel.textContent = 'qBit: Offline';
+                }
+
+                if (data.scan.running) {
+                    pollScanStatus();
+                }
+            } catch(e) {}
+        }
+
+        checkStatus();
+        setInterval(checkStatus, 30000);
+    </script>
+</body>
+</html>
