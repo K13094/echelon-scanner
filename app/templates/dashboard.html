@@ -7,197 +7,552 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { background:#0f0f0f; color:#eaeaea; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; min-height:100vh; }
+        body { background:#0a0a0f; color:#eaeaea; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; min-height:100vh; }
 
-        .nav { background:#1a1a2e; border-bottom:1px solid #2a2a4a; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
-        .nav h1 { font-size:18px; font-weight:800; color:#e94560; letter-spacing:1px; }
-        .nav__status { display:flex; gap:12px; align-items:center; }
-        .nav__dot { width:8px; height:8px; border-radius:50%; }
-        .nav__dot--green { background:#00d26a; }
-        .nav__dot--red { background:#e94560; }
+        /* ── Nav ── */
+        .nav { background:linear-gradient(180deg,#12121f,#0e0e18); border-bottom:1px solid #1e1e36; padding:14px 28px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; backdrop-filter:blur(12px); }
+        .nav__brand { display:flex; align-items:center; gap:10px; }
+        .nav__brand i { font-size:22px; color:#e94560; }
+        .nav__brand h1 { font-size:16px; font-weight:800; color:#fff; letter-spacing:2px; }
+        .nav__brand span { font-size:10px; color:#4a4a6a; font-weight:400; letter-spacing:0; margin-left:4px; }
+        .nav__indicators { display:flex; gap:16px; align-items:center; }
+        .indicator { display:flex; align-items:center; gap:6px; padding:5px 12px; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid #1e1e36; }
+        .indicator__dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+        .indicator__dot--on { background:#00d26a; box-shadow:0 0 8px rgba(0,210,106,0.5); }
+        .indicator__dot--off { background:#e94560; box-shadow:0 0 8px rgba(233,69,96,0.5); }
+        .indicator__dot--warn { background:#ffc107; box-shadow:0 0 8px rgba(255,193,7,0.5); }
+        .indicator__label { font-size:11px; color:#8a8a9a; font-weight:600; }
+        .indicator__value { font-size:11px; color:#c0c0d0; }
 
-        .container { max-width:1400px; margin:0 auto; padding:24px; }
+        .container { max-width:1440px; margin:0 auto; padding:24px; }
 
-        /* Stats Cards */
-        .stats { display:grid; grid-template-columns:repeat(5, 1fr); gap:16px; margin-bottom:24px; }
-        .stat { background:#1a1a2e; border:1px solid #2a2a4a; border-radius:14px; padding:20px; }
-        .stat__value { font-size:28px; font-weight:800; }
-        .stat__label { color:#4a4a6a; font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
-        .stat__icon { float:right; width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+        /* ── Stats Row ── */
+        .stats-row { display:grid; grid-template-columns:repeat(6, 1fr); gap:14px; margin-bottom:20px; }
+        .stat-card { background:linear-gradient(135deg,#13132a,#161632); border:1px solid #1e1e3a; border-radius:16px; padding:18px 20px; position:relative; overflow:hidden; }
+        .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+        .stat-card--blue::before { background:linear-gradient(90deg,#4a90d9,transparent); }
+        .stat-card--green::before { background:linear-gradient(90deg,#00d26a,transparent); }
+        .stat-card--yellow::before { background:linear-gradient(90deg,#ffc107,transparent); }
+        .stat-card--red::before { background:linear-gradient(90deg,#e94560,transparent); }
+        .stat-card--purple::before { background:linear-gradient(90deg,#a78bfa,transparent); }
+        .stat-card--cyan::before { background:linear-gradient(90deg,#06b6d4,transparent); }
+        .stat-card__top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+        .stat-card__icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+        .stat-card__value { font-size:26px; font-weight:800; line-height:1; }
+        .stat-card__label { color:#5a5a7a; font-size:10px; text-transform:uppercase; letter-spacing:1.2px; margin-top:4px; font-weight:700; }
 
-        /* Library Cards */
-        .library { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:24px; }
-        .lib-card { background:#1a1a2e; border:1px solid #2a2a4a; border-radius:14px; padding:20px; display:flex; align-items:center; gap:16px; }
-        .lib-card__icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; }
-        .lib-card__count { font-size:24px; font-weight:800; }
-        .lib-card__label { color:#4a4a6a; font-size:12px; }
+        /* ── Library Section ── */
+        .section-title { font-size:13px; font-weight:800; color:#5a5a7a; text-transform:uppercase; letter-spacing:2px; margin:28px 0 14px; display:flex; align-items:center; gap:8px; }
+        .section-title::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,#1e1e3a,transparent); }
 
-        /* Scan Button */
-        .scan-section { background:#1a1a2e; border:1px solid #2a2a4a; border-radius:14px; padding:20px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center; }
-        .scan-btn { padding:12px 32px; background:linear-gradient(135deg,#e94560,#c73050); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; }
-        .scan-btn:hover { background:linear-gradient(135deg,#ff5a78,#e94560); }
-        .scan-btn:disabled { background:#2a2a4a; cursor:not-allowed; color:#4a4a6a; }
-        .scan-progress { flex:1; margin:0 24px; }
-        .scan-bar { height:8px; background:#2a2a4a; border-radius:4px; overflow:hidden; }
-        .scan-bar__fill { height:100%; background:linear-gradient(90deg,#e94560,#ffc107,#00d26a); transition:width 0.3s; border-radius:4px; }
-        .scan-info { color:#4a4a6a; font-size:12px; margin-top:6px; }
+        .library-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:20px; }
+        .lib-card { background:linear-gradient(135deg,#13132a,#161632); border:1px solid #1e1e3a; border-radius:16px; padding:22px; position:relative; overflow:hidden; }
+        .lib-card__header { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+        .lib-card__icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; }
+        .lib-card__title { font-size:18px; font-weight:800; color:#fff; }
+        .lib-card__subtitle { font-size:11px; color:#4a4a6a; margin-top:2px; }
+        .lib-card__stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+        .lib-stat { padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.04); }
+        .lib-stat__value { font-size:18px; font-weight:800; }
+        .lib-stat__label { font-size:9px; color:#5a5a7a; text-transform:uppercase; letter-spacing:1px; margin-top:2px; font-weight:700; }
+        .lib-card__res { margin-top:4px; }
+        .res-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+        .res-label { font-size:11px; color:#6a6a8a; width:44px; font-weight:600; }
+        .res-bar { flex:1; height:6px; background:#1a1a30; border-radius:3px; overflow:hidden; }
+        .res-bar__fill { height:100%; border-radius:3px; transition:width 0.5s; }
+        .res-count { font-size:11px; color:#5a5a7a; width:50px; text-align:right; font-weight:600; }
 
-        /* Recent Activity */
-        .card { background:#1a1a2e; border:1px solid #2a2a4a; border-radius:14px; overflow:hidden; margin-bottom:24px; }
-        .card__hdr { padding:14px 20px; border-bottom:1px solid #2a2a4a; font-size:14px; font-weight:700; display:flex; justify-content:space-between; align-items:center; }
+        /* ── Resolution & qBit Row ── */
+        .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+        .card { background:linear-gradient(135deg,#13132a,#161632); border:1px solid #1e1e3a; border-radius:16px; overflow:hidden; }
+        .card__hdr { padding:14px 20px; border-bottom:1px solid #1e1e3a; font-size:13px; font-weight:700; display:flex; justify-content:space-between; align-items:center; }
         .card__hdr i { color:#4a4a6a; margin-right:6px; }
-        table { width:100%; border-collapse:collapse; }
-        th { padding:10px 16px; background:#16213e; color:#8a8a8a; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; text-align:left; border-bottom:1px solid #2a2a4a; }
-        td { padding:10px 16px; border-bottom:1px solid rgba(42,42,74,0.3); color:#c0c0c0; font-size:13px; }
-        tr:hover { background:rgba(233,69,96,0.02); }
-        .badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; }
-        .badge--uploaded { background:rgba(0,210,106,0.1); color:#00d26a; }
-        .badge--error { background:rgba(233,69,96,0.1); color:#e94560; }
-        .badge--scanned { background:rgba(74,144,217,0.1); color:#4a90d9; }
-        .badge--processing { background:rgba(255,193,7,0.1); color:#ffc107; }
+        .card__body { padding:20px; }
 
-        /* Logs */
-        .log-entry { padding:8px 16px; border-bottom:1px solid rgba(42,42,74,0.2); font-size:12px; font-family:monospace; }
-        .log-entry--info { color:#8a8a8a; }
+        .qbit-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .qbit-stat { padding:14px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.04); text-align:center; }
+        .qbit-stat__value { font-size:20px; font-weight:800; }
+        .qbit-stat__label { font-size:9px; color:#5a5a7a; text-transform:uppercase; letter-spacing:1px; margin-top:4px; font-weight:700; }
+
+        .res-full-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.03); }
+        .res-full-row:last-child { border-bottom:none; }
+        .res-full-label { font-size:13px; color:#9a9aba; width:60px; font-weight:700; }
+        .res-full-bar { flex:1; height:10px; background:#1a1a30; border-radius:5px; overflow:hidden; }
+        .res-full-bar__fill { height:100%; border-radius:5px; }
+        .res-full-count { font-size:13px; color:#7a7a9a; width:60px; text-align:right; font-weight:700; }
+        .res-full-pct { font-size:11px; color:#4a4a6a; width:40px; text-align:right; }
+
+        /* ── Scan Control ── */
+        .scan-section { background:linear-gradient(135deg,#13132a,#161632); border:1px solid #1e1e3a; border-radius:16px; padding:20px 24px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; gap:20px; }
+        .scan-info-left { flex-shrink:0; }
+        .scan-info-left__title { font-size:15px; font-weight:700; color:#fff; margin-bottom:4px; }
+        .scan-info-left__sub { color:#4a4a6a; font-size:12px; }
+        .scan-progress { flex:1; min-width:200px; }
+        .scan-bar { height:10px; background:#1a1a30; border-radius:5px; overflow:hidden; }
+        .scan-bar__fill { height:100%; background:linear-gradient(90deg,#e94560,#ffc107,#00d26a); transition:width 0.3s; border-radius:5px; }
+        .scan-info-text { color:#5a5a7a; font-size:11px; margin-top:6px; display:flex; justify-content:space-between; }
+        .scan-btns { display:flex; gap:8px; flex-shrink:0; }
+        .btn { padding:10px 24px; border:none; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all 0.2s; }
+        .btn--primary { background:linear-gradient(135deg,#e94560,#c73050); color:#fff; }
+        .btn--primary:hover { background:linear-gradient(135deg,#ff5a78,#e94560); transform:translateY(-1px); box-shadow:0 4px 16px rgba(233,69,96,0.3); }
+        .btn--primary:disabled { background:#2a2a4a; cursor:not-allowed; color:#4a4a6a; transform:none; box-shadow:none; }
+        .btn--ghost { background:rgba(255,255,255,0.03); color:#8a8a9a; border:1px solid #1e1e3a; }
+        .btn--ghost:hover { background:rgba(255,255,255,0.06); color:#c0c0d0; border-color:#2e2e4e; }
+
+        /* ── Activity Table ── */
+        .activity-section { margin-bottom:20px; }
+        .activity-grid { display:grid; grid-template-columns:5fr 2fr; gap:16px; }
+        .filter-bar { display:flex; gap:6px; padding:0 20px 14px; flex-wrap:wrap; }
+        .filter-btn { padding:5px 14px; font-size:11px; font-weight:700; border-radius:6px; border:1px solid #1e1e3a; background:transparent; color:#5a5a7a; cursor:pointer; transition:all 0.15s; }
+        .filter-btn:hover { border-color:#2e2e4e; color:#8a8a9a; }
+        .filter-btn--active { background:rgba(233,69,96,0.1); color:#e94560; border-color:rgba(233,69,96,0.3); }
+
+        table { width:100%; border-collapse:collapse; }
+        th { padding:10px 16px; background:rgba(0,0,0,0.2); color:#5a5a7a; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; text-align:left; border-bottom:1px solid #1e1e3a; }
+        td { padding:10px 16px; border-bottom:1px solid rgba(30,30,58,0.4); color:#b0b0c0; font-size:12px; }
+        tr:hover { background:rgba(233,69,96,0.015); }
+        .badge { font-size:9px; font-weight:800; padding:3px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:0.5px; }
+        .badge--uploaded { background:rgba(0,210,106,0.1); color:#00d26a; border:1px solid rgba(0,210,106,0.15); }
+        .badge--error { background:rgba(233,69,96,0.1); color:#e94560; border:1px solid rgba(233,69,96,0.15); }
+        .badge--scanned { background:rgba(74,144,217,0.1); color:#4a90d9; border:1px solid rgba(74,144,217,0.15); }
+        .badge--processing { background:rgba(255,193,7,0.1); color:#ffc107; border:1px solid rgba(255,193,7,0.15); }
+        .badge--skipped { background:rgba(168,139,250,0.1); color:#a78bfa; border:1px solid rgba(168,139,250,0.15); }
+        .badge--cat { font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px; }
+        .badge--movies { background:rgba(233,69,96,0.08); color:#e94560; }
+        .badge--shows { background:rgba(74,144,217,0.08); color:#4a90d9; }
+        .badge--anime { background:rgba(255,193,7,0.08); color:#ffc107; }
+
+        .item-name { color:#eaeaea; font-weight:600; font-size:13px; max-width:360px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .item-meta { color:#3a3a5a; font-size:10px; margin-top:2px; }
+        .item-ep { color:#6a6a8a; font-size:11px; font-weight:600; }
+
+        /* ── Logs ── */
+        .log-entry { padding:8px 16px; border-bottom:1px solid rgba(30,30,58,0.3); font-size:11px; font-family:'JetBrains Mono','Fira Code',monospace; display:flex; gap:8px; }
+        .log-entry--info { color:#6a6a8a; }
         .log-entry--success { color:#00d26a; }
         .log-entry--error { color:#e94560; }
-        .log-time { color:#3a3a5a; margin-right:8px; }
+        .log-time { color:#3a3a5a; flex-shrink:0; font-size:10px; }
+        .log-msg { word-break:break-all; }
 
-        .empty { text-align:center; padding:40px; color:#3a3a5a; }
-        .empty i { font-size:36px; margin-bottom:8px; display:block; }
+        .empty { text-align:center; padding:48px 20px; color:#3a3a5a; }
+        .empty i { font-size:40px; margin-bottom:12px; display:block; opacity:0.5; }
+        .empty p { font-size:13px; }
 
-        .two-col { display:grid; grid-template-columns:2fr 1fr; gap:24px; }
+        .show-more { text-align:center; padding:12px; }
+        .show-more a { color:#e94560; font-size:12px; font-weight:600; text-decoration:none; cursor:pointer; }
+        .show-more a:hover { color:#ff5a78; }
 
+        /* ── Tracker Status ── */
+        .tracker-row { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-top:12px; }
+        .tracker-stat { text-align:center; padding:10px; background:rgba(255,255,255,0.02); border-radius:10px; }
+        .tracker-stat__value { font-size:16px; font-weight:800; }
+        .tracker-stat__label { font-size:9px; color:#5a5a7a; text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width:6px; }
+        ::-webkit-scrollbar-track { background:#0a0a0f; }
+        ::-webkit-scrollbar-thumb { background:#2a2a4a; border-radius:3px; }
+        ::-webkit-scrollbar-thumb:hover { background:#3a3a5a; }
+
+        /* ── Responsive ── */
+        @media (max-width: 1200px) {
+            .stats-row { grid-template-columns:repeat(3, 1fr); }
+            .activity-grid { grid-template-columns:1fr; }
+        }
         @media (max-width: 768px) {
-            .stats { grid-template-columns:repeat(2, 1fr); }
-            .library { grid-template-columns:1fr; }
-            .two-col { grid-template-columns:1fr; }
+            .stats-row { grid-template-columns:repeat(2, 1fr); }
+            .library-grid { grid-template-columns:1fr; }
+            .info-grid { grid-template-columns:1fr; }
+            .scan-section { flex-direction:column; }
+            .nav { flex-direction:column; gap:10px; }
         }
     </style>
 </head>
 <body>
+    <!-- ═══ NAV ═══ -->
     <nav class="nav">
-        <h1><i class="fas fa-satellite-dish"></i> ECHELONHD SCANNER</h1>
-        <div class="nav__status">
-            <span class="nav__dot nav__dot--green" id="vpnDot"></span>
-            <span style="color:#8a8a8a; font-size:12px;" id="vpnLabel">VPN Connected</span>
-            <span class="nav__dot" id="qbitDot" style="background:#4a4a6a;"></span>
-            <span style="color:#8a8a8a; font-size:12px;" id="qbitLabel">qBit</span>
+        <div class="nav__brand">
+            <i class="fas fa-satellite-dish"></i>
+            <h1>ECHELONHD <span>SCANNER</span></h1>
+        </div>
+        <div class="nav__indicators">
+            <div class="indicator">
+                <span class="indicator__dot indicator__dot--on" id="vpnDot"></span>
+                <span class="indicator__label">VPN</span>
+                <span class="indicator__value" id="vpnLabel">Connected</span>
+            </div>
+            <div class="indicator">
+                <span class="indicator__dot {% if qbit.online %}indicator__dot--on{% else %}indicator__dot--off{% endif %}" id="qbitDot"></span>
+                <span class="indicator__label">qBit</span>
+                <span class="indicator__value" id="qbitLabel">{% if qbit.online %}{{ qbit.torrents }} torrents{% else %}Offline{% endif %}</span>
+            </div>
+            <div class="indicator">
+                <span class="indicator__dot indicator__dot--on" id="trackerDot"></span>
+                <span class="indicator__label">Tracker</span>
+                <span class="indicator__value" id="trackerLabel">EchelonHD</span>
+            </div>
         </div>
     </nav>
 
     <div class="container">
-        <!-- Stats -->
-        <div class="stats">
-            <div class="stat">
-                <div class="stat__icon" style="background:rgba(74,144,217,0.1); color:#4a90d9;"><i class="fas fa-database"></i></div>
-                <div class="stat__value" style="color:#4a90d9;">{{ total_items }}</div>
-                <div class="stat__label">Total Scanned</div>
+        <!-- ═══ OVERVIEW STATS ═══ -->
+        <div class="stats-row">
+            <div class="stat-card stat-card--blue">
+                <div class="stat-card__top">
+                    <div>
+                        <div class="stat-card__value" style="color:#4a90d9;">{{ "{:,}".format(total_items) }}</div>
+                        <div class="stat-card__label">Total Scanned</div>
+                    </div>
+                    <div class="stat-card__icon" style="background:rgba(74,144,217,0.1); color:#4a90d9;"><i class="fas fa-database"></i></div>
+                </div>
             </div>
-            <div class="stat">
-                <div class="stat__icon" style="background:rgba(0,210,106,0.1); color:#00d26a;"><i class="fas fa-check-circle"></i></div>
-                <div class="stat__value" style="color:#00d26a;">{{ uploaded }}</div>
-                <div class="stat__label">Uploaded</div>
+            <div class="stat-card stat-card--green">
+                <div class="stat-card__top">
+                    <div>
+                        <div class="stat-card__value" style="color:#00d26a;">{{ "{:,}".format(uploaded) }}</div>
+                        <div class="stat-card__label">Registered</div>
+                    </div>
+                    <div class="stat-card__icon" style="background:rgba(0,210,106,0.1); color:#00d26a;"><i class="fas fa-check-circle"></i></div>
+                </div>
             </div>
-            <div class="stat">
-                <div class="stat__icon" style="background:rgba(255,193,7,0.1); color:#ffc107;"><i class="fas fa-clock"></i></div>
-                <div class="stat__value" style="color:#ffc107;">{{ pending }}</div>
-                <div class="stat__label">Pending</div>
+            <div class="stat-card stat-card--yellow">
+                <div class="stat-card__top">
+                    <div>
+                        <div class="stat-card__value" style="color:#ffc107;">{{ "{:,}".format(pending) }}</div>
+                        <div class="stat-card__label">Pending</div>
+                    </div>
+                    <div class="stat-card__icon" style="background:rgba(255,193,7,0.1); color:#ffc107;"><i class="fas fa-clock"></i></div>
+                </div>
             </div>
-            <div class="stat">
-                <div class="stat__icon" style="background:rgba(233,69,96,0.1); color:#e94560;"><i class="fas fa-exclamation-triangle"></i></div>
-                <div class="stat__value" style="color:#e94560;">{{ errors }}</div>
-                <div class="stat__label">Errors</div>
+            <div class="stat-card stat-card--red">
+                <div class="stat-card__top">
+                    <div>
+                        <div class="stat-card__value" style="color:#e94560;">{{ "{:,}".format(errors) }}</div>
+                        <div class="stat-card__label">Errors</div>
+                    </div>
+                    <div class="stat-card__icon" style="background:rgba(233,69,96,0.1); color:#e94560;"><i class="fas fa-exclamation-triangle"></i></div>
+                </div>
             </div>
-            <div class="stat">
-                <div class="stat__icon" style="background:rgba(168,139,250,0.1); color:#a78bfa;"><i class="fas fa-hard-drive"></i></div>
-                <div class="stat__value" style="color:#a78bfa;">{{ "%.1f"|format(total_size / 1073741824) }} GB</div>
-                <div class="stat__label">Total Size</div>
+            <div class="stat-card stat-card--purple">
+                <div class="stat-card__top">
+                    <div>
+                        <div class="stat-card__value" style="color:#a78bfa;">{{ "{:,}".format(skipped) }}</div>
+                        <div class="stat-card__label">Skipped</div>
+                    </div>
+                    <div class="stat-card__icon" style="background:rgba(168,139,250,0.1); color:#a78bfa;"><i class="fas fa-forward"></i></div>
+                </div>
+            </div>
+            <div class="stat-card stat-card--cyan">
+                <div class="stat-card__top">
+                    <div>
+                        {% set total_lib_size = library_stats.get('movies', {}).get('total_size', 0) + library_stats.get('shows', {}).get('total_size', 0) + library_stats.get('anime', {}).get('total_size', 0) %}
+                        {% if total_lib_size > 1099511627776 %}
+                        <div class="stat-card__value" style="color:#06b6d4;">{{ "%.1f"|format(total_lib_size / 1099511627776) }} TB</div>
+                        {% else %}
+                        <div class="stat-card__value" style="color:#06b6d4;">{{ "%.1f"|format(total_lib_size / 1073741824) }} GB</div>
+                        {% endif %}
+                        <div class="stat-card__label">Library Size</div>
+                    </div>
+                    <div class="stat-card__icon" style="background:rgba(6,182,212,0.1); color:#06b6d4;"><i class="fas fa-hard-drive"></i></div>
+                </div>
             </div>
         </div>
 
-        <!-- Library Overview -->
-        <div class="library">
+        <!-- ═══ LIBRARY BREAKDOWN ═══ -->
+        <div class="section-title"><i class="fas fa-folder-open" style="color:#e94560;"></i> Media Library</div>
+
+        <div class="library-grid">
+            <!-- Movies -->
+            {% set m = library_stats.get('movies', {}) %}
             <div class="lib-card">
-                <div class="lib-card__icon" style="background:rgba(233,69,96,0.1); color:#e94560;"><i class="fas fa-film"></i></div>
-                <div>
-                    <div class="lib-card__count">{{ library_stats.get('movies', 0) }}</div>
-                    <div class="lib-card__label">Movies</div>
+                <div class="lib-card__header">
+                    <div class="lib-card__icon" style="background:linear-gradient(135deg,rgba(233,69,96,0.15),rgba(233,69,96,0.05)); color:#e94560;"><i class="fas fa-film"></i></div>
+                    <div>
+                        <div class="lib-card__title">Movies</div>
+                        <div class="lib-card__subtitle">
+                            {% if m.get('total_size', 0) > 1099511627776 %}{{ "%.1f"|format(m.get('total_size', 0) / 1099511627776) }} TB{% else %}{{ "%.1f"|format(m.get('total_size', 0) / 1073741824) }} GB{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="lib-card__stats">
+                    <div class="lib-stat">
+                        <div class="lib-stat__value" style="color:#e94560;">{{ "{:,}".format(m.get('titles', 0)) }}</div>
+                        <div class="lib-stat__label">Titles</div>
+                    </div>
+                    <div class="lib-stat">
+                        <div class="lib-stat__value" style="color:#e94560;">{{ "{:,}".format(m.get('episodes', 0)) }}</div>
+                        <div class="lib-stat__label">Files</div>
+                    </div>
+                </div>
+                {% set m_res = m.get('resolutions', {}) %}
+                {% set m_total_res = m_res.get('2160p', 0) + m_res.get('1080p', 0) + m_res.get('720p', 0) + m_res.get('480p', 0) + m_res.get('other', 0) %}
+                {% if m_total_res > 0 %}
+                <div class="lib-card__res">
+                    {% for res, color in [('2160p', '#ffc107'), ('1080p', '#e94560'), ('720p', '#4a90d9'), ('480p', '#06b6d4')] %}
+                    {% if m_res.get(res, 0) > 0 %}
+                    <div class="res-row">
+                        <span class="res-label">{{ res }}</span>
+                        <div class="res-bar"><div class="res-bar__fill" style="width:{{ (m_res.get(res, 0) / m_total_res * 100)|int }}%; background:{{ color }};"></div></div>
+                        <span class="res-count">{{ "{:,}".format(m_res.get(res, 0)) }}</span>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- TV Shows -->
+            {% set s = library_stats.get('shows', {}) %}
+            <div class="lib-card">
+                <div class="lib-card__header">
+                    <div class="lib-card__icon" style="background:linear-gradient(135deg,rgba(74,144,217,0.15),rgba(74,144,217,0.05)); color:#4a90d9;"><i class="fas fa-tv"></i></div>
+                    <div>
+                        <div class="lib-card__title">TV Shows</div>
+                        <div class="lib-card__subtitle">
+                            {% if s.get('total_size', 0) > 1099511627776 %}{{ "%.1f"|format(s.get('total_size', 0) / 1099511627776) }} TB{% else %}{{ "%.1f"|format(s.get('total_size', 0) / 1073741824) }} GB{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="lib-card__stats">
+                    <div class="lib-stat">
+                        <div class="lib-stat__value" style="color:#4a90d9;">{{ "{:,}".format(s.get('titles', 0)) }}</div>
+                        <div class="lib-stat__label">Shows</div>
+                    </div>
+                    <div class="lib-stat">
+                        <div class="lib-stat__value" style="color:#4a90d9;">{{ "{:,}".format(s.get('seasons', 0)) }}</div>
+                        <div class="lib-stat__label">Seasons</div>
+                    </div>
+                    <div class="lib-stat">
+                        <div class="lib-stat__value" style="color:#4a90d9;">{{ "{:,}".format(s.get('episodes', 0)) }}</div>
+                        <div class="lib-stat__label">Episodes</div>
+                    </div>
+                    <div class="lib-stat">
+                        <div class="lib-stat__value" style="color:#4a90d9;">{{ "{:,}".format(s.get('season_packs', 0)) }}</div>
+                        <div class="lib-stat__label">Season Packs</div>
+                    </div>
+                </div>
+                {% set s_res = s.get('resolutions', {}) %}
+                {% set s_total_res = s_res.get('2160p', 0) + s_res.get('1080p', 0) + s_res.get('720p', 0) + s_res.get('480p', 0) + s_res.get('other', 0) %}
+                {% if s_total_res > 0 %}
+                <div class="lib-card__res">
+                    {% for res, color in [('2160p', '#ffc107'), ('1080p', '#e94560'), ('720p', '#4a90d9'), ('480p', '#06b6d4')] %}
+                    {% if s_res.get(res, 0) > 0 %}
+                    <div class="res-row">
+                        <span class="res-label">{{ res }}</span>
+                        <div class="res-bar"><div class="res-bar__fill" style="width:{{ (s_res.get(res, 0) / s_total_res * 100)|int }}%; background:{{ color }};"></div></div>
+                        <span class="res-count">{{ "{:,}".format(s_res.get(res, 0)) }}</span>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Anime -->
+            {% set a = library_stats.get('anime', {}) %}
+            <div class="lib-card">
+                <div class="lib-card__header">
+                    <div class="lib-card__icon" style="background:linear-gradient(135deg,rgba(255,193,7,0.15),rgba(255,193,7,0.05)); color:#ffc107;"><i class="fas fa-dragon"></i></div>
+                    <div>
+                        <div class="lib-card__title">Anime</div>
+                        <div class="lib-card__subtitle">
+                            {% if a.get('total_size', 0) > 1099511627776 %}{{ "%.1f"|format(a.get('total_size', 0) / 1099511627776) }} TB{% else %}{{ "%.1f"|format(a.get('total_size', 0) / 1073741824) }} GB{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="lib-card__stats">
+                    <div class="lib-stat">
+                        <div class="lib-stat__value" style="color:#ffc107;">{{ "{:,}".format(a.get('titles', 0)) }}</div>
+                        <div class="lib-stat__label">Series</div>
+                    </div>
+                    <div class="lib-stat">
+                        <div class="lib-stat__value" style="color:#ffc107;">{{ "{:,}".format(a.get('seasons', 0)) }}</div>
+                        <div class="lib-stat__label">Seasons</div>
+                    </div>
+                    <div class="lib-stat">
+                        <div class="lib-stat__value" style="color:#ffc107;">{{ "{:,}".format(a.get('episodes', 0)) }}</div>
+                        <div class="lib-stat__label">Episodes</div>
+                    </div>
+                    <div class="lib-stat">
+                        <div class="lib-stat__value" style="color:#ffc107;">{{ "{:,}".format(a.get('season_packs', 0)) }}</div>
+                        <div class="lib-stat__label">Season Packs</div>
+                    </div>
+                </div>
+                {% set a_res = a.get('resolutions', {}) %}
+                {% set a_total_res = a_res.get('2160p', 0) + a_res.get('1080p', 0) + a_res.get('720p', 0) + a_res.get('480p', 0) + a_res.get('other', 0) %}
+                {% if a_total_res > 0 %}
+                <div class="lib-card__res">
+                    {% for res, color in [('2160p', '#ffc107'), ('1080p', '#e94560'), ('720p', '#4a90d9'), ('480p', '#06b6d4')] %}
+                    {% if a_res.get(res, 0) > 0 %}
+                    <div class="res-row">
+                        <span class="res-label">{{ res }}</span>
+                        <div class="res-bar"><div class="res-bar__fill" style="width:{{ (a_res.get(res, 0) / a_total_res * 100)|int }}%; background:{{ color }};"></div></div>
+                        <span class="res-count">{{ "{:,}".format(a_res.get(res, 0)) }}</span>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ═══ RESOLUTION & QBIT ═══ -->
+        <div class="info-grid">
+            <!-- Overall Resolution Breakdown (from DB scanned items) -->
+            <div class="card">
+                <div class="card__hdr"><span><i class="fas fa-chart-bar"></i> Resolution Breakdown</span><span style="font-size:10px; color:#4a4a6a;">Scanned Items</span></div>
+                <div class="card__body">
+                    {% set total_res = res_breakdown.values()|sum if res_breakdown else 1 %}
+                    {% if res_breakdown %}
+                        {% for res, count in res_breakdown.items() %}
+                        <div class="res-full-row">
+                            <span class="res-full-label">{{ res }}</span>
+                            <div class="res-full-bar">
+                                <div class="res-full-bar__fill" style="width:{{ (count / total_res * 100)|int }}%; background:{% if '2160' in res %}#ffc107{% elif '1080' in res %}#e94560{% elif '720' in res %}#4a90d9{% else %}#06b6d4{% endif %};"></div>
+                            </div>
+                            <span class="res-full-count">{{ "{:,}".format(count) }}</span>
+                            <span class="res-full-pct">{{ "%.0f"|format(count / total_res * 100) }}%</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty"><i class="fas fa-chart-bar"></i><p>No data yet. Run a scan first.</p></div>
+                    {% endif %}
                 </div>
             </div>
-            <div class="lib-card">
-                <div class="lib-card__icon" style="background:rgba(74,144,217,0.1); color:#4a90d9;"><i class="fas fa-tv"></i></div>
-                <div>
-                    <div class="lib-card__count">{{ library_stats.get('shows', 0) }}</div>
-                    <div class="lib-card__label">TV Shows</div>
+
+            <!-- qBittorrent -->
+            <div class="card">
+                <div class="card__hdr">
+                    <span><i class="fas fa-download"></i> qBittorrent</span>
+                    <span style="font-size:10px; color:{% if qbit.online %}#00d26a{% else %}#e94560{% endif %}; font-weight:700;">{% if qbit.online %}ONLINE{% else %}OFFLINE{% endif %}</span>
                 </div>
-            </div>
-            <div class="lib-card">
-                <div class="lib-card__icon" style="background:rgba(255,193,7,0.1); color:#ffc107;"><i class="fas fa-dragon"></i></div>
-                <div>
-                    <div class="lib-card__count">{{ library_stats.get('anime', 0) }}</div>
-                    <div class="lib-card__label">Anime</div>
+                <div class="card__body">
+                    <div class="qbit-grid">
+                        <div class="qbit-stat">
+                            <div class="qbit-stat__value" style="color:#4a90d9;" id="qTorrents">{{ qbit.torrents }}</div>
+                            <div class="qbit-stat__label">Torrents</div>
+                        </div>
+                        <div class="qbit-stat">
+                            <div class="qbit-stat__value" style="color:#00d26a;" id="qUpSpeed">{{ "%.1f"|format(qbit.up_speed / 1024) }} KB/s</div>
+                            <div class="qbit-stat__label">Upload Speed</div>
+                        </div>
+                        <div class="qbit-stat">
+                            <div class="qbit-stat__value" style="color:#e94560;" id="qDlSpeed">{{ "%.1f"|format(qbit.dl_speed / 1024) }} KB/s</div>
+                            <div class="qbit-stat__label">Download Speed</div>
+                        </div>
+                        <div class="qbit-stat">
+                            <div class="qbit-stat__value" style="color:#ffc107;" id="qRatio">--</div>
+                            <div class="qbit-stat__label">Global Ratio</div>
+                        </div>
+                    </div>
+                    <div class="tracker-row" style="margin-top:16px;">
+                        {% for cat_name, cat_data in cat_db_stats.items() %}
+                        <div class="tracker-stat">
+                            <div class="tracker-stat__value" style="color:{% if cat_name == 'movies' %}#e94560{% elif cat_name == 'shows' %}#4a90d9{% else %}#ffc107{% endif %};">{{ cat_data.get('uploaded', 0) }}</div>
+                            <div class="tracker-stat__label">{{ cat_name|capitalize }} Reg'd</div>
+                        </div>
+                        {% endfor %}
+                        <div class="tracker-stat">
+                            <div class="tracker-stat__value" style="color:#00d26a;">{{ uploaded }}</div>
+                            <div class="tracker-stat__label">Total Reg'd</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Scan Control -->
+        <!-- ═══ SCAN CONTROL ═══ -->
         <div class="scan-section">
-            <div>
-                <div style="font-size:16px; font-weight:700; margin-bottom:4px;">Library Scanner</div>
-                <div style="color:#4a4a6a; font-size:12px;">
-                    {% if last_scan %}Last scan: {{ last_scan }}{% else %}Never scanned{% endif %}
+            <div class="scan-info-left">
+                <div class="scan-info-left__title"><i class="fas fa-radar" style="color:#e94560; margin-right:6px;"></i>Library Scanner</div>
+                <div class="scan-info-left__sub">
+                    {% if last_scan %}
+                        Last scan: {{ last_scan[:19].replace('T', ' ') }}
+                    {% else %}
+                        Never scanned
+                    {% endif %}
                 </div>
             </div>
             <div class="scan-progress" id="scanProgress" style="display:{% if scan_state.running %}block{% else %}none{% endif %};">
                 <div class="scan-bar"><div class="scan-bar__fill" id="scanBar" style="width:{% if scan_state.total > 0 %}{{ (scan_state.progress / scan_state.total * 100)|int }}%{% else %}0%{% endif %};"></div></div>
-                <div class="scan-info" id="scanInfo">{{ scan_state.current }}</div>
+                <div class="scan-info-text">
+                    <span id="scanInfo">{{ scan_state.current }}</span>
+                    <span id="scanPct">{% if scan_state.total > 0 %}{{ scan_state.progress }}/{{ scan_state.total }}{% endif %}</span>
+                </div>
             </div>
-            <div style="display:flex; gap:10px;">
-                <button class="scan-btn" style="background:linear-gradient(135deg,#2a2a4a,#1a1a2e); border:1px solid #2a2a4a;" onclick="resetAll()">
-                    <i class="fas fa-trash-alt"></i> Clear History
-                </button>
-                <button class="scan-btn" id="scanBtn" onclick="startScan()" {% if scan_state.running %}disabled{% endif %}>
-                    <i class="fas fa-{% if scan_state.running %}spinner fa-spin{% else %}radar{% endif %}"></i>
+            <div class="scan-btns">
+                <button class="btn btn--ghost" onclick="resetAll()" title="Clear scan history"><i class="fas fa-trash-alt"></i></button>
+                <button class="btn btn--primary" id="scanBtn" onclick="startScan()" {% if scan_state.running %}disabled{% endif %}>
+                    <i class="fas fa-{% if scan_state.running %}spinner fa-spin{% else %}play{% endif %}"></i>
                     {% if scan_state.running %}Scanning...{% else %}Start Scan{% endif %}
                 </button>
             </div>
         </div>
 
-        <div class="two-col">
+        <!-- ═══ ACTIVITY & LOGS ═══ -->
+        <div class="section-title"><i class="fas fa-list" style="color:#4a90d9;"></i> Activity</div>
+
+        <div class="activity-grid">
             <!-- Recent Activity -->
             <div class="card">
-                <div class="card__hdr"><span><i class="fas fa-list"></i> Recent Activity</span></div>
+                <div class="card__hdr"><span><i class="fas fa-history"></i> Recent Activity</span><span style="font-size:10px; color:#4a4a6a;">{{ "{:,}".format(total_items) }} items</span></div>
+                <div class="filter-bar" id="filterBar">
+                    <button class="filter-btn filter-btn--active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="movies">Movies</button>
+                    <button class="filter-btn" data-filter="shows">TV Shows</button>
+                    <button class="filter-btn" data-filter="anime">Anime</button>
+                    <span style="width:1px; background:#1e1e3a; margin:0 4px;"></span>
+                    <button class="filter-btn" data-filter="uploaded">Uploaded</button>
+                    <button class="filter-btn" data-filter="error">Errors</button>
+                    <button class="filter-btn" data-filter="processing">Pending</button>
+                    <button class="filter-btn" data-filter="skipped">Skipped</button>
+                </div>
                 {% if recent %}
+                <div style="max-height:520px; overflow-y:auto;">
                 <table>
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Category</th>
+                            <th>Type</th>
+                            <th>Season / Episode</th>
                             <th>Size</th>
+                            <th>Resolution</th>
                             <th>Status</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="activityBody">
                         {% for item in recent %}
-                        <tr>
-                            <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                <div style="color:#eaeaea; font-weight:600;">{{ item.title }}</div>
-                                <div style="color:#3a3a5a; font-size:10px;">{{ item.year or '' }} &middot; {{ item.resolution }}</div>
-                            </td>
+                        <tr class="activity-row" data-cat="{{ item.category }}" data-status="{{ item.status }}">
                             <td>
-                                {% if item.category == 'movies' %}<span style="color:#e94560;">Movies</span>
-                                {% elif item.category == 'shows' %}<span style="color:#4a90d9;">TV</span>
-                                {% else %}<span style="color:#ffc107;">Anime</span>{% endif %}
+                                <div class="item-name">{{ item.title or item.name }}</div>
+                                <div class="item-meta">{{ item.year or '' }}{% if item.tmdb_id %} &middot; TMDB #{{ item.tmdb_id }}{% endif %}</div>
                             </td>
-                            <td style="white-space:nowrap;">{{ "%.2f"|format(item.size / 1073741824) }} GB</td>
+                            <td><span class="badge badge--cat badge--{{ item.category }}">{{ item.category|capitalize }}</span></td>
+                            <td>
+                                {% if item.season_pack %}
+                                    <span class="item-ep" style="color:#a78bfa;">S{{ "%02d"|format(item.season) }} Pack</span>
+                                {% elif item.season and item.episode %}
+                                    <span class="item-ep">S{{ "%02d"|format(item.season) }}E{{ "%02d"|format(item.episode) }}</span>
+                                {% elif item.season %}
+                                    <span class="item-ep">S{{ "%02d"|format(item.season) }}</span>
+                                {% else %}
+                                    <span style="color:#2a2a4a;">--</span>
+                                {% endif %}
+                            </td>
+                            <td style="white-space:nowrap;">
+                                {% if item.size > 1073741824 %}{{ "%.2f"|format(item.size / 1073741824) }} GB
+                                {% else %}{{ "%.0f"|format(item.size / 1048576) }} MB{% endif %}
+                            </td>
+                            <td><span style="color:{% if '2160' in (item.resolution or '') %}#ffc107{% elif '1080' in (item.resolution or '') %}#e94560{% elif '720' in (item.resolution or '') %}#4a90d9{% else %}#06b6d4{% endif %}; font-weight:700; font-size:11px;">{{ item.resolution }}</span></td>
                             <td>
                                 <span class="badge badge--{{ item.status }}">{{ item.status|capitalize }}</span>
+                                {% if item.error %}<div style="font-size:9px; color:#e94560; margin-top:2px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ item.error }}">{{ item.error }}</div>{% endif %}
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                </div>
                 {% else %}
                 <div class="empty"><i class="fas fa-inbox"></i><p>No items scanned yet. Click "Start Scan" to begin.</p></div>
                 {% endif %}
@@ -205,14 +560,16 @@
 
             <!-- Logs -->
             <div class="card">
-                <div class="card__hdr"><span><i class="fas fa-terminal"></i> Logs</span></div>
+                <div class="card__hdr"><span><i class="fas fa-terminal"></i> Logs</span><span style="font-size:10px; color:#4a4a6a;">{{ logs|length }} entries</span></div>
                 {% if logs %}
+                <div style="max-height:520px; overflow-y:auto;">
                 {% for log in logs %}
                 <div class="log-entry log-entry--{{ log.level }}">
-                    <span class="log-time">{{ log.created_at }}</span>
-                    {{ log.message }}
+                    <span class="log-time">{{ log.created_at[:19] if log.created_at else '' }}</span>
+                    <span class="log-msg">{{ log.message }}</span>
                 </div>
                 {% endfor %}
+                </div>
                 {% else %}
                 <div class="empty"><i class="fas fa-terminal"></i><p>No logs yet.</p></div>
                 {% endif %}
@@ -221,40 +578,80 @@
     </div>
 
     <script>
+        // ── Reset ──
         async function resetAll() {
-            if (!confirm('Clear all scan history? This will reset the dashboard but NOT remove torrents from EchelonHD or qBittorrent.')) return;
+            if (!confirm('Clear all scan history? This will NOT remove torrents from EchelonHD or qBittorrent.')) return;
             await fetch('/api/reset', { method: 'POST' });
             location.reload();
         }
 
+        // ── Scan ──
         async function startScan() {
             const btn = document.getElementById('scanBtn');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning...';
             document.getElementById('scanProgress').style.display = 'block';
-
             await fetch('/api/scan', { method: 'POST' });
             pollScanStatus();
         }
 
         async function pollScanStatus() {
-            const resp = await fetch('/api/scan/status');
-            const data = await resp.json();
-
-            if (data.running) {
-                const pct = data.total > 0 ? Math.round((data.progress / data.total) * 100) : 0;
-                document.getElementById('scanBar').style.width = pct + '%';
-                document.getElementById('scanInfo').textContent = data.current + ' (' + data.progress + '/' + data.total + ')';
-                setTimeout(pollScanStatus, 2000);
-            } else {
-                document.getElementById('scanBtn').disabled = false;
-                document.getElementById('scanBtn').innerHTML = '<i class="fas fa-radar"></i> Start Scan';
-                document.getElementById('scanInfo').textContent = 'Scan complete!';
-                setTimeout(() => location.reload(), 1000);
-            }
+            try {
+                const resp = await fetch('/api/scan/status');
+                const data = await resp.json();
+                if (data.running) {
+                    const pct = data.total > 0 ? Math.round((data.progress / data.total) * 100) : 0;
+                    document.getElementById('scanBar').style.width = pct + '%';
+                    document.getElementById('scanInfo').textContent = data.current;
+                    document.getElementById('scanPct').textContent = data.progress + '/' + data.total + ' (' + pct + '%)';
+                    setTimeout(pollScanStatus, 2000);
+                } else {
+                    document.getElementById('scanBtn').disabled = false;
+                    document.getElementById('scanBtn').innerHTML = '<i class="fas fa-play"></i> Start Scan';
+                    document.getElementById('scanInfo').textContent = 'Scan complete!';
+                    setTimeout(() => location.reload(), 1500);
+                }
+            } catch(e) { setTimeout(pollScanStatus, 5000); }
         }
 
-        // Check qBit status
+        // ── Filter Buttons ──
+        document.getElementById('filterBar').addEventListener('click', function(e) {
+            const btn = e.target.closest('.filter-btn');
+            if (!btn) return;
+            const filter = btn.dataset.filter;
+
+            // Toggle active state
+            const isActive = btn.classList.contains('filter-btn--active');
+            if (filter === 'all') {
+                this.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('filter-btn--active'));
+                if (!isActive) btn.classList.add('filter-btn--active');
+            } else {
+                this.querySelector('[data-filter="all"]').classList.remove('filter-btn--active');
+                btn.classList.toggle('filter-btn--active');
+            }
+
+            // Get all active filters
+            const activeFilters = [...this.querySelectorAll('.filter-btn--active')].map(b => b.dataset.filter);
+            const catFilters = activeFilters.filter(f => ['movies','shows','anime'].includes(f));
+            const statusFilters = activeFilters.filter(f => ['uploaded','error','processing','skipped'].includes(f));
+            const showAll = activeFilters.includes('all') || activeFilters.length === 0;
+
+            document.querySelectorAll('.activity-row').forEach(row => {
+                const cat = row.dataset.cat;
+                const status = row.dataset.status;
+                const catMatch = catFilters.length === 0 || catFilters.includes(cat);
+                const statusMatch = statusFilters.length === 0 || statusFilters.includes(status);
+                row.style.display = (showAll || (catMatch && statusMatch)) ? '' : 'none';
+            });
+        });
+
+        // ── Live Status ──
+        function fmtSpeed(bytes) {
+            if (bytes > 1048576) return (bytes / 1048576).toFixed(1) + ' MB/s';
+            if (bytes > 1024) return (bytes / 1024).toFixed(1) + ' KB/s';
+            return bytes + ' B/s';
+        }
+
         async function checkStatus() {
             try {
                 const resp = await fetch('/api/stats');
@@ -262,21 +659,21 @@
                 const qbitDot = document.getElementById('qbitDot');
                 const qbitLabel = document.getElementById('qbitLabel');
                 if (data.qbit.online) {
-                    qbitDot.style.background = '#00d26a';
-                    qbitLabel.textContent = 'qBit: ' + data.qbit.torrents + ' torrents';
+                    qbitDot.className = 'indicator__dot indicator__dot--on';
+                    qbitLabel.textContent = data.qbit.torrents + ' torrents';
+                    document.getElementById('qTorrents').textContent = data.qbit.torrents;
+                    document.getElementById('qUpSpeed').textContent = fmtSpeed(data.qbit.up_speed);
+                    document.getElementById('qDlSpeed').textContent = fmtSpeed(data.qbit.dl_speed);
                 } else {
-                    qbitDot.style.background = '#e94560';
-                    qbitLabel.textContent = 'qBit: Offline';
+                    qbitDot.className = 'indicator__dot indicator__dot--off';
+                    qbitLabel.textContent = 'Offline';
                 }
-
-                if (data.scan.running) {
-                    pollScanStatus();
-                }
+                if (data.scan.running) pollScanStatus();
             } catch(e) {}
         }
 
         checkStatus();
-        setInterval(checkStatus, 30000);
+        setInterval(checkStatus, 15000);
     </script>
 </body>
 </html>

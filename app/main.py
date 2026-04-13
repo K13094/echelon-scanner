@@ -476,38 +476,132 @@ async def run_scan():
 
 # ── Routes ──
 
+def get_library_deep_stats():
+    """Deep scan of media directories — counts shows, seasons, episodes, sizes, resolutions."""
+    stats = {}
+    for cat, base_path in MEDIA_DIRS.items():
+        base = Path(base_path)
+        cat_stats = {"titles": 0, "seasons": 0, "episodes": 0, "season_packs": 0,
+                     "total_size": 0, "resolutions": {"2160p": 0, "1080p": 0, "720p": 0, "480p": 0, "other": 0}}
+
+        if not base.exists():
+            stats[cat] = cat_stats
+            continue
+
+        for entry in base.iterdir():
+            if entry.name.startswith(".") or not entry.is_dir():
+                # Standalone video file
+                if entry.is_file() and entry.suffix.lower() in VIDEO_EXTENSIONS:
+                    cat_stats["titles"] += 1
+                    cat_stats["episodes"] += 1
+                    try:
+                        cat_stats["total_size"] += entry.stat().st_size
+                    except OSError:
+                        pass
+                    _, _, res, _, _ = parse_media_name(entry.name)
+                    cat_stats["resolutions"][res if res in cat_stats["resolutions"] else "other"] += 1
+                continue
+
+            cat_stats["titles"] += 1
+
+            # Check for season subdirectories
+            season_dirs = [d for d in entry.iterdir() if d.is_dir() and re.match(r"(?:Season|Series|S)\s*\d+", d.name, re.IGNORECASE)] if entry.is_dir() else []
+
+            if season_dirs and cat in ("shows", "anime"):
+                cat_stats["season_packs"] += len(season_dirs)
+                for season_dir in season_dirs:
+                    cat_stats["seasons"] += 1
+                    videos = [f for f in season_dir.rglob("*") if f.suffix.lower() in VIDEO_EXTENSIONS]
+                    cat_stats["episodes"] += len(videos)
+                    for v in videos:
+                        try:
+                            cat_stats["total_size"] += v.stat().st_size
+                        except OSError:
+                            pass
+                    if videos:
+                        _, _, res, _, _ = parse_media_name(videos[0].name)
+                        cat_stats["resolutions"][res if res in cat_stats["resolutions"] else "other"] += len(videos)
+            else:
+                # Movie folder or single-season show
+                videos = [f for f in entry.rglob("*") if f.suffix.lower() in VIDEO_EXTENSIONS]
+                cat_stats["episodes"] += len(videos)
+                for v in videos:
+                    try:
+                        cat_stats["total_size"] += v.stat().st_size
+                    except OSError:
+                        pass
+                if videos:
+                    _, _, res, _, _ = parse_media_name(videos[0].name)
+                    cat_stats["resolutions"][res if res in cat_stats["resolutions"] else "other"] += len(videos)
+
+        stats[cat] = cat_stats
+    return stats
+
+# Cache library stats to avoid re-scanning filesystem on every page load
+_library_cache = {"data": None, "time": 0}
+
+def get_cached_library_stats():
+    if _library_cache["data"] is None or time.time() - _library_cache["time"] > 300:
+        _library_cache["data"] = get_library_deep_stats()
+        _library_cache["time"] = time.time()
+    return _library_cache["data"]
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     db = get_db()
 
-    # Stats
+    # DB Stats
     total_items = db.execute("SELECT COUNT(*) as c FROM scanned_items").fetchone()["c"]
     uploaded = db.execute("SELECT COUNT(*) as c FROM scanned_items WHERE status = 'uploaded'").fetchone()["c"]
     errors = db.execute("SELECT COUNT(*) as c FROM scanned_items WHERE status = 'error'").fetchone()["c"]
     pending = db.execute("SELECT COUNT(*) as c FROM scanned_items WHERE status IN ('scanned', 'processing')").fetchone()["c"]
-
+    skipped = db.execute("SELECT COUNT(*) as c FROM scanned_items WHERE status = 'skipped'").fetchone()["c"]
     total_size = db.execute("SELECT COALESCE(SUM(size), 0) as s FROM scanned_items").fetchone()["s"]
 
-    # Category breakdown
-    categories = db.execute("SELECT category, COUNT(*) as c, SUM(size) as s FROM scanned_items GROUP BY category").fetchall()
+    # Per-category DB stats
+    cat_db_stats = {}
+    for row in db.execute("""SELECT category,
+        COUNT(*) as total,
+        SUM(CASE WHEN status='uploaded' THEN 1 ELSE 0 END) as uploaded,
+        SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as errors,
+        SUM(CASE WHEN status='skipped' THEN 1 ELSE 0 END) as skipped,
+        SUM(CASE WHEN season_pack=1 THEN 1 ELSE 0 END) as season_packs,
+        SUM(CASE WHEN episode IS NOT NULL THEN 1 ELSE 0 END) as episodes,
+        COALESCE(SUM(size), 0) as size
+        FROM scanned_items GROUP BY category""").fetchall():
+        cat_db_stats[row["category"]] = dict(row)
 
-    # Recent activity
-    recent = db.execute("SELECT * FROM scanned_items ORDER BY created_at DESC LIMIT 20").fetchall()
+    # Resolution breakdown from DB
+    res_breakdown = {}
+    for row in db.execute("SELECT resolution, COUNT(*) as c FROM scanned_items GROUP BY resolution ORDER BY c DESC").fetchall():
+        res_breakdown[row["resolution"]] = row["c"]
+
+    # Recent activity (more items)
+    recent = db.execute("SELECT * FROM scanned_items ORDER BY created_at DESC LIMIT 50").fetchall()
 
     # Logs
-    logs = db.execute("SELECT * FROM scan_logs ORDER BY created_at DESC LIMIT 10").fetchall()
+    logs = db.execute("SELECT * FROM scan_logs ORDER BY created_at DESC LIMIT 20").fetchall()
 
-    # Library stats (quick scan without DB)
-    library_stats = {}
-    for cat, path in MEDIA_DIRS.items():
-        p = Path(path)
-        if p.exists():
-            count = sum(1 for _ in p.iterdir() if not _.name.startswith("."))
-            library_stats[cat] = count
-        else:
-            library_stats[cat] = 0
+    # Deep library filesystem stats (cached 5 min)
+    library_stats = get_cached_library_stats()
 
     last_scan = db.execute("SELECT value FROM stats WHERE key = 'last_scan'").fetchone()
+
+    # qBit status for initial render
+    qbit_status = {"online": False, "torrents": 0, "dl_speed": 0, "up_speed": 0}
+    try:
+        import qbittorrentapi
+        client = qbittorrentapi.Client(host=CONFIG["qbit_url"], username=CONFIG["qbit_user"], password=CONFIG["qbit_pass"])
+        client.auth_log_in()
+        info = client.transfer_info()
+        qbit_status = {
+            "online": True,
+            "torrents": len(client.torrents_info()),
+            "dl_speed": info.get("dl_info_speed", 0),
+            "up_speed": info.get("up_info_speed", 0),
+        }
+    except Exception:
+        pass
 
     db.close()
 
@@ -517,13 +611,16 @@ async def dashboard(request: Request):
         "uploaded": uploaded,
         "errors": errors,
         "pending": pending,
+        "skipped": skipped,
         "total_size": total_size,
-        "categories": categories,
+        "cat_db_stats": cat_db_stats,
+        "res_breakdown": res_breakdown,
         "recent": recent,
         "logs": logs,
         "library_stats": library_stats,
         "scan_state": scan_state,
         "last_scan": last_scan["value"] if last_scan else None,
+        "qbit": qbit_status,
     })
 
 @app.post("/api/scan")
