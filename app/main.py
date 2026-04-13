@@ -56,6 +56,9 @@ def init_db():
             category TEXT,
             resolution TEXT,
             size INTEGER,
+            season INTEGER,
+            episode INTEGER,
+            season_pack INTEGER DEFAULT 0,
             tmdb_id INTEGER,
             tmdb_type TEXT,
             status TEXT DEFAULT 'scanned',
@@ -84,7 +87,7 @@ init_db()
 VIDEO_EXTENSIONS = {".mkv", ".mp4", ".avi", ".m4v", ".ts", ".wmv", ".flv", ".mov"}
 
 def parse_media_name(path: str):
-    """Extract title, year, resolution from file/folder name."""
+    """Extract title, year, resolution, season, episode from file/folder name."""
     name = Path(path).stem if Path(path).is_file() else Path(path).name
     clean = name.replace(".", " ").replace("_", " ").replace("-", " ")
 
@@ -101,14 +104,37 @@ def parse_media_name(path: str):
     elif re.search(r"480p", clean):
         resolution = "480p"
 
-    title = re.sub(r"\b(2160p|1080p|720p|480p|BluRay|WEB[ -]?DL|WEBRip|HDTV|REMUX|x264|x265|H[ .]?264|H[ .]?265|HEVC|AVC|AAC|DDP|DTS|FLAC|10bit|HDR|AMZN|NF|DSNP|REMASTERED|REPACK|PROPER|INTERNAL)\b.*", "", clean, flags=re.IGNORECASE)
+    # Detect season/episode (S01E01, Season 1, etc.)
+    season = None
+    episode = None
+    se_match = re.search(r"S(\d{1,2})E(\d{1,3})", clean, re.IGNORECASE)
+    if se_match:
+        season = int(se_match.group(1))
+        episode = int(se_match.group(2))
+    else:
+        s_match = re.search(r"Season\s*(\d{1,2})", clean, re.IGNORECASE)
+        if s_match:
+            season = int(s_match.group(1))
+        e_match = re.search(r"(?:Episode|E|Ep)\s*(\d{1,3})", clean, re.IGNORECASE)
+        if e_match:
+            episode = int(e_match.group(1))
+
+    title = re.sub(r"\b(S\d{1,2}E\d{1,3}|Season\s*\d+|Episode\s*\d+)\b", "", clean, flags=re.IGNORECASE)
+    title = re.sub(r"\b(2160p|1080p|720p|480p|BluRay|WEB[ -]?DL|WEBRip|HDTV|REMUX|x264|x265|H[ .]?264|H[ .]?265|HEVC|AVC|AAC|DDP|DTS|FLAC|10bit|HDR|AMZN|NF|DSNP|REMASTERED|REPACK|PROPER|INTERNAL)\b.*", "", title, flags=re.IGNORECASE)
     title = re.sub(r"\s*\(?\d{4}\)?\s*$", "", title)
     title = re.sub(r"\s+", " ", title).strip()
 
-    return title, year, resolution
+    return title, year, resolution, season, episode
 
 def scan_directory(base_path: str, category: str):
-    """Scan a media directory and return found items."""
+    """Scan a media directory and return found items.
+
+    Handles:
+    - Movies: /Movies/Movie Name (2024)/movie.mkv → single torrent per movie
+    - TV Shows: /Shows/Show Name/Season 01/ → one torrent per season pack
+    - TV Shows: /Shows/Show Name/Show.S01E01.mkv → individual episodes
+    - Anime: Same as TV Shows or Movies depending on structure
+    """
     items = []
     base = Path(base_path)
     if not base.exists():
@@ -119,23 +145,81 @@ def scan_directory(base_path: str, category: str):
             continue
 
         if entry.is_dir():
-            # Check if directory contains video files
-            videos = [f for f in entry.rglob("*") if f.suffix.lower() in VIDEO_EXTENSIONS]
-            if videos:
-                total_size = sum(f.stat().st_size for f in videos)
-                title, year, resolution = parse_media_name(entry.name)
-                items.append({
-                    "path": str(entry),
-                    "name": entry.name,
-                    "title": title,
-                    "year": year,
-                    "category": category,
-                    "resolution": resolution,
-                    "size": total_size,
-                    "file_count": len(videos),
-                })
+            # Check for TV-style structure (has Season subdirs)
+            season_dirs = [d for d in entry.iterdir() if d.is_dir() and re.match(r"(?:Season|Series|S)\s*\d+", d.name, re.IGNORECASE)]
+
+            if season_dirs and category in ("shows", "anime"):
+                # TV Show with season folders — create one torrent per season
+                show_title, show_year, _, _, _ = parse_media_name(entry.name)
+
+                for season_dir in sorted(season_dirs):
+                    videos = [f for f in season_dir.rglob("*") if f.suffix.lower() in VIDEO_EXTENSIONS]
+                    if not videos:
+                        continue
+
+                    total_size = sum(f.stat().st_size for f in videos)
+                    s_match = re.search(r"(\d+)", season_dir.name)
+                    season_num = int(s_match.group(1)) if s_match else 1
+
+                    # Detect resolution from first video
+                    _, _, resolution, _, _ = parse_media_name(videos[0].name)
+
+                    upload_name = f"{show_title} S{season_num:02d}"
+                    if show_year:
+                        upload_name = f"{show_title} ({show_year}) S{season_num:02d}"
+
+                    items.append({
+                        "path": str(season_dir),
+                        "name": season_dir.name,
+                        "title": show_title,
+                        "year": show_year,
+                        "category": category,
+                        "resolution": resolution,
+                        "size": total_size,
+                        "file_count": len(videos),
+                        "season": season_num,
+                        "episode": None,
+                        "season_pack": 1,
+                        "upload_name": upload_name,
+                    })
+            else:
+                # Movie or single-folder content
+                videos = [f for f in entry.rglob("*") if f.suffix.lower() in VIDEO_EXTENSIONS]
+                if videos:
+                    total_size = sum(f.stat().st_size for f in videos)
+                    title, year, resolution, season, episode = parse_media_name(entry.name)
+
+                    upload_name = title
+                    if year:
+                        upload_name = f"{title} {year}"
+                    if season and episode:
+                        upload_name = f"{title} S{season:02d}E{episode:02d}"
+                    elif season:
+                        upload_name = f"{title} S{season:02d}"
+
+                    items.append({
+                        "path": str(entry),
+                        "name": entry.name,
+                        "title": title,
+                        "year": year,
+                        "category": category,
+                        "resolution": resolution,
+                        "size": total_size,
+                        "file_count": len(videos),
+                        "season": season,
+                        "episode": episode,
+                        "season_pack": 1 if (season and not episode) else 0,
+                        "upload_name": upload_name,
+                    })
         elif entry.suffix.lower() in VIDEO_EXTENSIONS:
-            title, year, resolution = parse_media_name(entry.name)
+            title, year, resolution, season, episode = parse_media_name(entry.name)
+
+            upload_name = title
+            if year:
+                upload_name = f"{title} {year}"
+            if season and episode:
+                upload_name = f"{title} S{season:02d}E{episode:02d}"
+
             items.append({
                 "path": str(entry),
                 "name": entry.name,
@@ -145,6 +229,10 @@ def scan_directory(base_path: str, category: str):
                 "resolution": resolution,
                 "size": entry.stat().st_size,
                 "file_count": 1,
+                "season": season,
+                "episode": episode,
+                "season_pack": 0,
+                "upload_name": upload_name,
             })
 
     return items
@@ -263,9 +351,10 @@ async def run_scan():
                 continue
 
             # Save to DB
-            db.execute("""INSERT OR REPLACE INTO scanned_items (path, name, title, year, category, resolution, size, status)
-                          VALUES (?, ?, ?, ?, ?, ?, ?, 'processing')""",
-                       (item["path"], item["name"], item["title"], item["year"], item["category"], item["resolution"], item["size"]))
+            db.execute("""INSERT OR REPLACE INTO scanned_items (path, name, title, year, category, resolution, size, season, episode, season_pack, status)
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'processing')""",
+                       (item["path"], item["name"], item["title"], item["year"], item["category"], item["resolution"], item["size"],
+                        item.get("season"), item.get("episode"), item.get("season_pack", 0)))
             db.commit()
 
             # TMDB lookup
@@ -276,7 +365,8 @@ async def run_scan():
                            (tmdb_data["id"], tmdb_type, item["path"]))
 
             # Create .torrent
-            torrent_filename = re.sub(r'[^\w\s-]', '', item["title"]).replace(" ", "_") + ".torrent"
+            upload_name = item.get("upload_name", f"{item['title']} {item.get('year', '')}".strip())
+            torrent_filename = re.sub(r'[^\w\s-]', '', upload_name).replace(" ", "_") + ".torrent"
             torrent_path = f"/torrents/{torrent_filename}"
             infohash = create_torrent(item["path"], announce_url, torrent_path)
 
