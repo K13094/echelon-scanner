@@ -12,6 +12,7 @@ services:
       - OPENVPN_PASSWORD=Lol1234!
       - SERVER_COUNTRIES=Netherlands
       - FIREWALL_VPN_INPUT_PORTS=46213
+      - FIREWALL_OUTBOUND_SUBNETS=192.168.0.0/24
       - DOT=on
       - DOT_PROVIDERS=cloudflare
       - BLOCK_MALICIOUS=on
