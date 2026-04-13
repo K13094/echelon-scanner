@@ -10,8 +10,10 @@ services:
       - OPENVPN_PASSWORD=${VPN_PASS}
       - SERVER_COUNTRIES=${VPN_COUNTRY:-Netherlands}
     ports:
-      - "${QBIT_PORT:-8080}:8080"
-      - "${DASHBOARD_PORT:-9090}:9090"
+      - "${QBIT_PORT:-6891}:6891"         # qBit WebUI (non-standard port)
+      - "${DASHBOARD_PORT:-9090}:9090"    # Scanner Dashboard
+      - "${BT_PORT:-46213}:46213"         # BitTorrent peer port
+      - "${BT_PORT:-46213}:46213/udp"
     volumes:
       - ./data/gluetun:/gluetun
     restart: unless-stopped
@@ -23,18 +25,17 @@ services:
 
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
-    container_name: echelon-qbit
+    container_name: echelon-qbit-scanner
     network_mode: service:vpn
     environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
+      - PUID=${PUID:-568}
+      - PGID=${PGID:-568}
       - TZ=${TZ:-UTC}
-      - WEBUI_PORT=8080
+      - WEBUI_PORT=6891
+      - TORRENTING_PORT=46213
     volumes:
       - ./data/qbit:/config
-      - ${MOVIES_PATH:-./data/media/movies}:/media/movies:ro
-      - ${SHOWS_PATH:-./data/media/shows}:/media/shows:ro
-      - ${ANIME_PATH:-./data/media/anime}:/media/anime:ro
+      - ${MEDIA_PATH:-/mnt/Media/MediaServer}:/media:ro
       - ./data/torrents:/torrents
     restart: unless-stopped
     depends_on:
@@ -48,18 +49,16 @@ services:
     environment:
       - TRACKER_URL=${TRACKER_URL:-https://echelonhd.me}
       - TRACKER_PASSKEY=${TRACKER_PASSKEY}
-      - TRACKER_API_ENDPOINT=${TRACKER_API_ENDPOINT:-https://echelonhd.me/upload-manager.php}
-      - TRACKER_API_PASSWORD=${TRACKER_API_PASSWORD}
+      - TRACKER_API_ENDPOINT=${TRACKER_API_ENDPOINT:-}
+      - TRACKER_API_PASSWORD=${TRACKER_API_PASSWORD:-}
       - TMDB_API_KEY=${TMDB_API_KEY:-93889655f8028098b115e8aa5e3f4414}
-      - QBIT_URL=http://localhost:8080
+      - QBIT_URL=http://localhost:6891
       - QBIT_USER=${QBIT_USER:-admin}
       - QBIT_PASS=${QBIT_PASS:-adminadmin}
       - SCAN_INTERVAL=${SCAN_INTERVAL:-0}
       - DB_PATH=/data/scanner.db
     volumes:
-      - ${MOVIES_PATH:-./data/media/movies}:/media/movies:ro
-      - ${SHOWS_PATH:-./data/media/shows}:/media/shows:ro
-      - ${ANIME_PATH:-./data/media/anime}:/media/anime:ro
+      - ${MEDIA_PATH:-/mnt/Media/MediaServer}:/media:ro
       - ./data/torrents:/torrents
       - ./data:/data
     restart: unless-stopped

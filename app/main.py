@@ -25,7 +25,7 @@ CONFIG = {
     "tracker_api_endpoint": os.getenv("TRACKER_API_ENDPOINT", ""),
     "tracker_api_password": os.getenv("TRACKER_API_PASSWORD", ""),
     "tmdb_api_key": os.getenv("TMDB_API_KEY", "93889655f8028098b115e8aa5e3f4414"),
-    "qbit_url": os.getenv("QBIT_URL", "http://localhost:8080"),
+    "qbit_url": os.getenv("QBIT_URL", "http://localhost:6891"),
     "qbit_user": os.getenv("QBIT_USER", "admin"),
     "qbit_pass": os.getenv("QBIT_PASS", "adminadmin"),
     "db_path": os.getenv("DB_PATH", "/data/scanner.db"),
@@ -33,9 +33,9 @@ CONFIG = {
 }
 
 MEDIA_DIRS = {
-    "movies": "/media/movies",
-    "shows": "/media/shows",
-    "anime": "/media/anime",
+    "movies": "/media/Movies",
+    "shows": "/media/Shows",
+    "anime": "/media/Anime",
 }
 
 # Database
