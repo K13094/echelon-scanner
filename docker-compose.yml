@@ -6,12 +6,13 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     environment:
-      - VPN_SERVICE_PROVIDER=ipvanish
+      - VPN_SERVICE_PROVIDER=protonvpn
       - VPN_TYPE=openvpn
-      - OPENVPN_USER=kleom94@gmail.com
-      - OPENVPN_PASSWORD=Lol1234!
+      - OPENVPN_USER=kPhaonQwPpKHGtq0+pmp
+      - OPENVPN_PASSWORD=67yrgjulOK3GVlZtsbVcINVPdIlgGTV8
       - SERVER_COUNTRIES=Netherlands
-      - FIREWALL_VPN_INPUT_PORTS=46213
+      - VPN_PORT_FORWARDING=on
+      - VPN_PORT_FORWARDING_PROVIDER=protonvpn
       - FIREWALL_OUTBOUND_SUBNETS=192.168.0.0/24
       - DOT=on
       - DOT_PROVIDERS=cloudflare
@@ -21,8 +22,6 @@ services:
     ports:
       - "6891:6891"
       - "9090:9090"
-      - "46213:46213"
-      - "46213:46213/udp"
     volumes:
       - ./data/gluetun:/gluetun
     restart: unless-stopped
@@ -48,6 +47,7 @@ services:
       - ./data/qbit:/config
       - /mnt/Media/MediaServer:/media:ro
       - ./data/torrents:/torrents
+      - ./data/gluetun:/gluetun:ro
     restart: unless-stopped
     depends_on:
       vpn:
@@ -63,7 +63,7 @@ services:
       - TMDB_API_KEY=93889655f8028098b115e8aa5e3f4414
       - QBIT_URL=http://localhost:6891
       - QBIT_USER=admin
-      - QBIT_PASS=EchelonHD2026!!
+      - QBIT_PASS=Lol1234
       - TRACKER_API_ENDPOINT=https://echelonhd.me/upload-manager.php?action=scanner_register
       - TRACKER_API_PASSWORD=EchelonHD20261234!!
       - SCAN_INTERVAL=0
