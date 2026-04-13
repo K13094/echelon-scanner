@@ -42,7 +42,7 @@ services:
       - PGID=568
       - TZ=America/New_York
       - WEBUI_PORT=6891
-      - TORRENTING_PORT=46213
+      - TORRENTING_PORT=59852
     volumes:
       - ./data/qbit:/config
       - /mnt/Media/MediaServer:/media:ro
