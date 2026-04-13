@@ -224,7 +224,7 @@ def scan_directory(base_path: str, category: str):
                     title, year, resolution, season, episode = parse_media_name(entry.name)
 
                     upload_name = title
-                    if year:
+                    if year and year != title:
                         upload_name = f"{title} {year}"
                     if season and episode:
                         upload_name = f"{title} S{season:02d}E{episode:02d}"
@@ -349,7 +349,7 @@ async def register_on_tracker(item: dict, torrent_hash: str, torrent_path: str, 
             "torrent_data": torrent_data,
             "size": item["size"],
             "tmdb_id": tmdb_data["id"] if tmdb_data else None,
-            "tmdb_type": "tv" if item["category"] in ("shows",) else "movie",
+            "tmdb_type": "tv" if item["category"] in ("shows", "anime") else "movie",
             "season": item.get("season"),
             "episode": item.get("episode"),
             "season_pack": item.get("season_pack", 0),
@@ -464,7 +464,7 @@ async def run_scan():
             db.commit()
 
             # TMDB lookup
-            tmdb_type = "tv" if item["category"] == "shows" else "movie"
+            tmdb_type = "tv" if item["category"] in ("shows", "anime") else "movie"
             tmdb_data = await search_tmdb(item["title"], item["year"], tmdb_type)
             if tmdb_data:
                 db.execute("UPDATE scanned_items SET tmdb_id = ?, tmdb_type = ? WHERE path = ?",
@@ -499,7 +499,7 @@ async def run_scan():
                     continue
 
             # Add to qBit
-            parent_path = str(Path(item["path"]).parent) if Path(item["path"]).is_file() else str(Path(item["path"]).parent)
+            parent_path = str(Path(item["path"]).parent)
             qbit_added = await add_to_qbit(torrent_path, parent_path)
 
             if qbit_added:
