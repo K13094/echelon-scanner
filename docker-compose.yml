@@ -8,9 +8,9 @@ services:
     environment:
       - VPN_SERVICE_PROVIDER=protonvpn
       - VPN_TYPE=openvpn
-      - OPENVPN_USER=kPhaonQwPpKHGtq0+pmp
+      - OPENVPN_USER=kPhaonQwPpKHGtq0+b:8+pmp
       - OPENVPN_PASSWORD=67yrgjulOK3GVlZtsbVcINVPdIlgGTV8
-      - SERVER_COUNTRIES=Netherlands
+      - SERVER_HOSTNAMES=212.92.104.209
       - VPN_PORT_FORWARDING=on
       - VPN_PORT_FORWARDING_PROVIDER=protonvpn
       - FIREWALL_OUTBOUND_SUBNETS=192.168.0.0/24
