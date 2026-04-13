@@ -53,7 +53,7 @@ services:
         condition: service_healthy
 
   scanner:
-    build: .
+    image: ghcr.io/k13094/echelon-scanner:latest
     container_name: echelon-scanner
     network_mode: service:vpn
     environment:
