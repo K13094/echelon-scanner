@@ -19,6 +19,7 @@ services:
       - BLOCK_MALICIOUS=on
       - BLOCK_SURVEILLANCE=on
       - BLOCK_ADS=on
+      - HTTP_CONTROL_SERVER_AUTH=off
     ports:
       - "6891:6891"
       - "9090:9090"
