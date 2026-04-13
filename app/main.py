@@ -149,24 +149,23 @@ def scan_directory(base_path: str, category: str):
             season_dirs = [d for d in entry.iterdir() if d.is_dir() and re.match(r"(?:Season|Series|S)\s*\d+", d.name, re.IGNORECASE)]
 
             if season_dirs and category in ("shows", "anime"):
-                # TV Show with season folders — create one torrent per season
+                # TV Show with season folders
                 show_title, show_year, _, _, _ = parse_media_name(entry.name)
 
                 for season_dir in sorted(season_dirs):
-                    videos = [f for f in season_dir.rglob("*") if f.suffix.lower() in VIDEO_EXTENSIONS]
+                    videos = sorted([f for f in season_dir.rglob("*") if f.suffix.lower() in VIDEO_EXTENSIONS])
                     if not videos:
                         continue
 
                     total_size = sum(f.stat().st_size for f in videos)
                     s_match = re.search(r"(\d+)", season_dir.name)
                     season_num = int(s_match.group(1)) if s_match else 1
-
-                    # Detect resolution from first video
                     _, _, resolution, _, _ = parse_media_name(videos[0].name)
 
-                    upload_name = f"{show_title} S{season_num:02d}"
+                    # 1. Season Pack — whole season as one torrent
+                    pack_name = f"{show_title} S{season_num:02d}"
                     if show_year:
-                        upload_name = f"{show_title} ({show_year}) S{season_num:02d}"
+                        pack_name = f"{show_title} ({show_year}) S{season_num:02d}"
 
                     items.append({
                         "path": str(season_dir),
@@ -180,8 +179,41 @@ def scan_directory(base_path: str, category: str):
                         "season": season_num,
                         "episode": None,
                         "season_pack": 1,
-                        "upload_name": upload_name,
+                        "upload_name": f"{pack_name} {resolution} Season Pack",
                     })
+
+                    # 2. Individual Episodes — each episode as its own torrent
+                    for video_file in videos:
+                        ep_title, ep_year, ep_res, ep_season, ep_episode = parse_media_name(video_file.name)
+                        if not ep_episode:
+                            # Try to extract episode number from filename
+                            ep_match = re.search(r"[Ee](\d{1,3})", video_file.name)
+                            if ep_match:
+                                ep_episode = int(ep_match.group(1))
+                            else:
+                                # Number-based (01, 02, etc.)
+                                num_match = re.search(r"(?:^|\D)(\d{1,3})(?:\D|$)", video_file.stem)
+                                if num_match:
+                                    ep_episode = int(num_match.group(1))
+
+                        ep_name = f"{show_title} S{season_num:02d}E{ep_episode:02d}" if ep_episode else f"{show_title} S{season_num:02d} - {video_file.stem}"
+                        if show_year:
+                            ep_name = f"{show_title} ({show_year}) S{season_num:02d}E{ep_episode:02d}" if ep_episode else ep_name
+
+                        items.append({
+                            "path": str(video_file),
+                            "name": video_file.name,
+                            "title": show_title,
+                            "year": show_year,
+                            "category": category,
+                            "resolution": ep_res,
+                            "size": video_file.stat().st_size,
+                            "file_count": 1,
+                            "season": season_num,
+                            "episode": ep_episode,
+                            "season_pack": 0,
+                            "upload_name": f"{ep_name} {ep_res}",
+                        })
             else:
                 # Movie or single-folder content
                 videos = [f for f in entry.rglob("*") if f.suffix.lower() in VIDEO_EXTENSIONS]
