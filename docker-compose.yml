@@ -10,7 +10,8 @@ services:
       - VPN_TYPE=openvpn
       - OPENVPN_USER=kPhaonQwPpKHGtq0+b:8+pmp
       - OPENVPN_PASSWORD=67yrgjulOK3GVlZtsbVcINVPdIlgGTV8
-      - SERVER_HOSTNAMES=212.92.104.209
+      - FREE_ONLY=false
+      - SERVER_COUNTRIES=Netherlands
       - VPN_PORT_FORWARDING=on
       - VPN_PORT_FORWARDING_PROVIDER=protonvpn
       - FIREWALL_OUTBOUND_SUBNETS=192.168.0.0/24
