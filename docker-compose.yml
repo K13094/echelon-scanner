@@ -3,16 +3,27 @@ services:
     image: qmcgaw/gluetun
     container_name: echelon-vpn
     cap_add: [NET_ADMIN]
+    devices:
+      - /dev/net/tun:/dev/net/tun
     environment:
       - VPN_SERVICE_PROVIDER=ipvanish
       - VPN_TYPE=openvpn
       - OPENVPN_USER=${VPN_USER}
       - OPENVPN_PASSWORD=${VPN_PASS}
       - SERVER_COUNTRIES=${VPN_COUNTRY:-Netherlands}
+      # Kill switch — block ALL traffic if VPN drops
+      - FIREWALL_VPN_INPUT_PORTS=${BT_PORT:-46213}
+      - FIREWALL_OUTBOUND_SUBNETS=
+      # DNS through VPN only
+      - DOT=on
+      - DOT_PROVIDERS=cloudflare
+      - BLOCK_MALICIOUS=on
+      - BLOCK_SURVEILLANCE=on
+      - BLOCK_ADS=on
     ports:
-      - "${QBIT_PORT:-6891}:6891"         # qBit WebUI (non-standard port)
-      - "${DASHBOARD_PORT:-9090}:9090"    # Scanner Dashboard
-      - "${BT_PORT:-46213}:46213"         # BitTorrent peer port
+      - "${QBIT_PORT:-6891}:6891"
+      - "${DASHBOARD_PORT:-9090}:9090"
+      - "${BT_PORT:-46213}:46213"
       - "${BT_PORT:-46213}:46213/udp"
     volumes:
       - ./data/gluetun:/gluetun
@@ -22,6 +33,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
 
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
@@ -32,7 +45,7 @@ services:
       - PGID=${PGID:-568}
       - TZ=${TZ:-UTC}
       - WEBUI_PORT=6891
-      - TORRENTING_PORT=46213
+      - TORRENTING_PORT=${BT_PORT:-46213}
     volumes:
       - ./data/qbit:/config
       - ${MEDIA_PATH:-/mnt/Media/MediaServer}:/media:ro
