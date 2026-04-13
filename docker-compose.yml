@@ -7,8 +7,9 @@ services:
       - /dev/net/tun:/dev/net/tun
     environment:
       - VPN_SERVICE_PROVIDER=protonvpn
-      - VPN_TYPE=wireguard
-      - WIREGUARD_PRIVATE_KEY=KG1iYuhWobnTlLIFmtZP+sQbj2qUudiK5XXrR2sX92Q=
+      - VPN_TYPE=openvpn
+      - OPENVPN_USER=kPhaonQwPpKHGtq0+pmp
+      - OPENVPN_PASSWORD=67yrgjulOK3GVlZtsbVcINVPdIlgGTV8
       - SERVER_COUNTRIES=Netherlands
       - FREE_ONLY=false
       - VPN_PORT_FORWARDING=on
