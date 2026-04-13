@@ -64,6 +64,8 @@ services:
       - QBIT_URL=http://localhost:6891
       - QBIT_USER=admin
       - QBIT_PASS=EchelonHD2026!!
+      - TRACKER_API_ENDPOINT=https://echelonhd.me/upload-manager.php?action=scanner_register
+      - TRACKER_API_PASSWORD=EchelonHD20261234!!
       - SCAN_INTERVAL=0
       - DB_PATH=/data/scanner.db
     volumes:

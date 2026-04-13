@@ -316,30 +316,47 @@ async def add_to_qbit(torrent_path: str, save_path: str):
     except Exception:
         return False
 
-async def register_on_tracker(item: dict, torrent_hash: str, tmdb_data: dict = None):
+async def register_on_tracker(item: dict, torrent_hash: str, torrent_path: str, tmdb_data: dict = None):
     """Register torrent on EchelonHD via upload-manager API."""
+    import base64
     try:
         endpoint = CONFIG["tracker_api_endpoint"]
         if not endpoint:
-            return True  # Skip if no endpoint configured
+            return {"success": False, "error": "No API endpoint configured"}
+
+        # Read torrent file and base64 encode it
+        with open(torrent_path, "rb") as f:
+            torrent_data = base64.b64encode(f.read()).decode("ascii")
+
+        # Map category names
+        cat_map = {"movies": "Movies", "shows": "TV", "anime": "Anime"}
+        category = cat_map.get(item["category"], "Movies")
+
+        upload_name = item.get("upload_name", f"{item['title']} {item.get('year', '')}".strip())
 
         payload = {
-            "action": "scanner_register",
             "password": CONFIG["tracker_api_password"],
-            "name": f"{item['title']} {item.get('year', '')}".strip(),
-            "category": item["category"].capitalize(),
+            "name": upload_name,
+            "category": category,
             "resolution": item["resolution"],
-            "hash": torrent_hash,
+            "torrent_data": torrent_data,
             "size": item["size"],
             "tmdb_id": tmdb_data["id"] if tmdb_data else None,
-            "tmdb_type": "movie" if item["category"] in ["movies", "anime"] else "tv",
+            "tmdb_type": "tv" if item["category"] in ("shows",) else "movie",
+            "season": item.get("season"),
+            "episode": item.get("episode"),
+            "season_pack": item.get("season_pack", 0),
         }
 
         async with aiohttp.ClientSession() as session:
-            async with session.post(endpoint, json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
-                return resp.status == 200
-    except Exception:
-        return False
+            async with session.post(endpoint, json=payload, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+                result = await resp.json()
+                if result.get("success"):
+                    return {"success": True, "id": result.get("id"), "name": result.get("name")}
+                else:
+                    return {"success": False, "error": result.get("error", "Unknown error")}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 # ── Background Scanner ──
 
@@ -410,7 +427,19 @@ async def run_scan():
             db.execute("UPDATE scanned_items SET torrent_hash = ? WHERE path = ?", (infohash, item["path"]))
 
             # Register on tracker
-            registered = await register_on_tracker(item, infohash, tmdb_data)
+            reg_result = await register_on_tracker(item, infohash, torrent_path, tmdb_data)
+
+            if not reg_result.get("success"):
+                error_msg = reg_result.get("error", "Registration failed")
+                if error_msg in ("Duplicate", "Duplicate hash"):
+                    db.execute("UPDATE scanned_items SET status = 'skipped', error = ? WHERE path = ?", (error_msg, item["path"]))
+                    db.commit()
+                    skipped += 1
+                    continue
+                else:
+                    db.execute("UPDATE scanned_items SET status = 'error', error = ? WHERE path = ?", (f"Register: {error_msg}", item["path"]))
+                    db.commit()
+                    continue
 
             # Add to qBit
             parent_path = str(Path(item["path"]).parent) if Path(item["path"]).is_file() else str(Path(item["path"]).parent)
