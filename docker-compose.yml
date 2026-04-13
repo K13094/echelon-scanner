@@ -7,16 +7,14 @@ services:
       - /dev/net/tun:/dev/net/tun
     environment:
       - VPN_SERVICE_PROVIDER=protonvpn
-      - VPN_TYPE=openvpn
-      - OPENVPN_USER=kPhaonQwPpKHGtq0+pmp
-      - OPENVPN_PASSWORD=67yrgjulOK3GVlZtsbVcINVPdIlgGTV8
-      - FREE_ONLY=false
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=kOIOt4sYP0MoeaY3MtTxgobS1zECS3CxmxL9oIoJtXE=
       - SERVER_COUNTRIES=Netherlands
+      - FREE_ONLY=false
       - VPN_PORT_FORWARDING=on
       - VPN_PORT_FORWARDING_PROVIDER=protonvpn
       - FIREWALL_OUTBOUND_SUBNETS=192.168.0.0/24
-      - DOT=on
-      - DOT_PROVIDERS=cloudflare
+      - DNS_UPSTREAM_RESOLVERS=1.1.1.1
       - BLOCK_MALICIOUS=on
       - BLOCK_SURVEILLANCE=on
       - BLOCK_ADS=on
