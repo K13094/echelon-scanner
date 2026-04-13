@@ -8,23 +8,20 @@ services:
     environment:
       - VPN_SERVICE_PROVIDER=ipvanish
       - VPN_TYPE=openvpn
-      - OPENVPN_USER=${VPN_USER}
-      - OPENVPN_PASSWORD=${VPN_PASS}
-      - SERVER_COUNTRIES=${VPN_COUNTRY:-Netherlands}
-      # Kill switch — block ALL traffic if VPN drops
-      - FIREWALL_VPN_INPUT_PORTS=${BT_PORT:-46213}
-      - FIREWALL_OUTBOUND_SUBNETS=
-      # DNS through VPN only
+      - OPENVPN_USER=kleom94@gmail.com
+      - OPENVPN_PASSWORD=Lol1234!
+      - SERVER_COUNTRIES=Netherlands
+      - FIREWALL_VPN_INPUT_PORTS=46213
       - DOT=on
       - DOT_PROVIDERS=cloudflare
       - BLOCK_MALICIOUS=on
       - BLOCK_SURVEILLANCE=on
       - BLOCK_ADS=on
     ports:
-      - "${QBIT_PORT:-6891}:6891"
-      - "${DASHBOARD_PORT:-9090}:9090"
-      - "${BT_PORT:-46213}:46213"
-      - "${BT_PORT:-46213}:46213/udp"
+      - "6891:6891"
+      - "9090:9090"
+      - "46213:46213"
+      - "46213:46213/udp"
     volumes:
       - ./data/gluetun:/gluetun
     restart: unless-stopped
@@ -41,14 +38,14 @@ services:
     container_name: echelon-qbit-scanner
     network_mode: service:vpn
     environment:
-      - PUID=${PUID:-568}
-      - PGID=${PGID:-568}
-      - TZ=${TZ:-UTC}
+      - PUID=568
+      - PGID=568
+      - TZ=America/New_York
       - WEBUI_PORT=6891
-      - TORRENTING_PORT=${BT_PORT:-46213}
+      - TORRENTING_PORT=46213
     volumes:
       - ./data/qbit:/config
-      - ${MEDIA_PATH:-/mnt/Media/MediaServer}:/media:ro
+      - /mnt/Media/MediaServer:/media:ro
       - ./data/torrents:/torrents
     restart: unless-stopped
     depends_on:
@@ -60,18 +57,16 @@ services:
     container_name: echelon-scanner
     network_mode: service:vpn
     environment:
-      - TRACKER_URL=${TRACKER_URL:-https://echelonhd.me}
-      - TRACKER_PASSKEY=${TRACKER_PASSKEY}
-      - TRACKER_API_ENDPOINT=${TRACKER_API_ENDPOINT:-}
-      - TRACKER_API_PASSWORD=${TRACKER_API_PASSWORD:-}
-      - TMDB_API_KEY=${TMDB_API_KEY:-93889655f8028098b115e8aa5e3f4414}
+      - TRACKER_URL=https://echelonhd.me
+      - TRACKER_PASSKEY=4c0f5b47a59b525df996827fd15b09ce
+      - TMDB_API_KEY=93889655f8028098b115e8aa5e3f4414
       - QBIT_URL=http://localhost:6891
-      - QBIT_USER=${QBIT_USER:-admin}
-      - QBIT_PASS=${QBIT_PASS:-adminadmin}
-      - SCAN_INTERVAL=${SCAN_INTERVAL:-0}
+      - QBIT_USER=admin
+      - QBIT_PASS=EchelonHD2026!!
+      - SCAN_INTERVAL=0
       - DB_PATH=/data/scanner.db
     volumes:
-      - ${MEDIA_PATH:-/mnt/Media/MediaServer}:/media:ro
+      - /mnt/Media/MediaServer:/media:ro
       - ./data/torrents:/torrents
       - ./data:/data
     restart: unless-stopped
