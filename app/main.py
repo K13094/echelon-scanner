@@ -370,22 +370,42 @@ async def register_on_tracker(item: dict, torrent_hash: str, torrent_path: str, 
 _last_synced_port = {"port": None}
 
 async def port_sync_loop():
-    """Background task: read Gluetun forwarded port file and update qBit listening port."""
+    """Background task: get forwarded port from Gluetun and update qBit listening port."""
     import logging
     log = logging.getLogger("uvicorn.error")
     await asyncio.sleep(20)  # Wait for VPN + qBit to start
     while True:
         try:
-            port_file = Path("/gluetun-tmp/forwarded_port")
-            if port_file.exists():
-                new_port = port_file.read_text().strip()
-                if new_port and new_port != "0" and new_port != _last_synced_port["port"]:
-                    import qbittorrentapi
-                    client = qbittorrentapi.Client(host=CONFIG["qbit_url"], username=CONFIG["qbit_user"], password=CONFIG["qbit_pass"])
-                    client.auth_log_in()
-                    client.app_set_preferences(prefs={"listen_port": int(new_port)})
-                    _last_synced_port["port"] = new_port
-                    log.info(f"[port-sync] qBit listening port set to {new_port}")
+            new_port = None
+            # Try reading from shared volume first
+            for path in ["/gluetun-tmp/forwarded_port", "/gluetun/forwarded_port", "/tmp/gluetun/forwarded_port"]:
+                p = Path(path)
+                if p.exists():
+                    new_port = p.read_text().strip()
+                    if new_port and new_port != "0":
+                        break
+                    new_port = None
+
+            # Fallback: try Gluetun HTTP API
+            if not new_port:
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get("http://localhost:8000/v1/openvpn/portforwarded", timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                port_val = data.get("port", 0)
+                                if port_val and port_val != 0:
+                                    new_port = str(port_val)
+                except Exception:
+                    pass
+
+            if new_port and new_port != "0" and new_port != _last_synced_port["port"]:
+                import qbittorrentapi
+                client = qbittorrentapi.Client(host=CONFIG["qbit_url"], username=CONFIG["qbit_user"], password=CONFIG["qbit_pass"])
+                client.auth_log_in()
+                client.app_set_preferences(prefs={"listen_port": int(new_port)})
+                _last_synced_port["port"] = new_port
+                log.info(f"[port-sync] qBit listening port set to {new_port}")
         except Exception as e:
             import logging
             logging.getLogger("uvicorn.error").warning(f"[port-sync] Failed: {e}")
