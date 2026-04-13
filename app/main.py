@@ -40,8 +40,10 @@ MEDIA_DIRS = {
 
 # Database
 def get_db():
-    db = sqlite3.connect(CONFIG["db_path"])
+    db = sqlite3.connect(CONFIG["db_path"], timeout=30)
     db.row_factory = sqlite3.Row
+    db.execute("PRAGMA journal_mode=WAL")
+    db.execute("PRAGMA busy_timeout=30000")
     return db
 
 def init_db():
