@@ -706,3 +706,136 @@ async def reset_all():
     db.commit()
     db.close()
     return {"status": "reset"}
+
+@app.post("/api/sync")
+async def sync_with_tracker():
+    """Check all uploaded items against EchelonHD and re-register any that are missing."""
+    import base64
+    db = get_db()
+
+    # Get all items that were uploaded and have a torrent hash
+    uploaded_items = db.execute(
+        "SELECT id, path, title, year, category, resolution, size, season, episode, season_pack, torrent_hash, tmdb_id, tmdb_type FROM scanned_items WHERE status IN ('uploaded', 'skipped') AND torrent_hash IS NOT NULL"
+    ).fetchall()
+
+    if not uploaded_items:
+        db.close()
+        return {"synced": 0, "missing": 0, "reregistered": 0, "message": "No uploaded items to check"}
+
+    # Batch check hashes against tracker
+    hashes = [item["torrent_hash"] for item in uploaded_items]
+    hash_to_items = {}
+    for item in uploaded_items:
+        hash_to_items[item["torrent_hash"]] = dict(item)
+
+    check_url = CONFIG["tracker_api_endpoint"].replace("scanner_register", "scanner_check")
+    missing_hashes = []
+
+    try:
+        # Check in batches of 100
+        for i in range(0, len(hashes), 100):
+            batch = hashes[i:i+100]
+            async with aiohttp.ClientSession() as session:
+                async with session.post(check_url, json={
+                    "password": CONFIG["tracker_api_password"],
+                    "hashes": batch
+                }, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+                    result = await resp.json()
+                    missing_hashes.extend(result.get("missing", []))
+    except Exception as e:
+        db.execute("INSERT INTO scan_logs (message, level) VALUES (?, ?)", (f"Sync error: {str(e)}", "error"))
+        db.commit()
+        db.close()
+        return {"error": str(e)}
+
+    if not missing_hashes:
+        db.execute("INSERT INTO scan_logs (message, level) VALUES (?, ?)",
+                   (f"Sync complete: checked {len(hashes)} items, all present on tracker", "success"))
+        db.commit()
+        db.close()
+        return {"synced": len(hashes), "missing": 0, "reregistered": 0}
+
+    # Re-register missing items using existing .torrent files
+    reregistered = 0
+    for h in missing_hashes:
+        item = hash_to_items.get(h)
+        if not item:
+            continue
+
+        # Find the .torrent file
+        upload_name = f"{item['title']} {item.get('year', '')}".strip()
+        torrent_filename = re.sub(r'[^\w\s-]', '', upload_name).replace(" ", "_") + ".torrent"
+        torrent_path = f"/torrents/{torrent_filename}"
+
+        if not Path(torrent_path).exists():
+            db.execute("UPDATE scanned_items SET status = 'error', error = 'Torrent file missing for re-register' WHERE id = ?", (item["id"],))
+            continue
+
+        # Build the registration payload
+        cat_map = {"movies": "Movies", "shows": "TV", "anime": "Anime"}
+        tmdb_data = {"id": item["tmdb_id"]} if item.get("tmdb_id") else None
+
+        reg_result = await register_on_tracker(
+            {"title": item["title"], "year": item.get("year"), "category": item["category"],
+             "resolution": item["resolution"], "size": item["size"],
+             "season": item.get("season"), "episode": item.get("episode"),
+             "season_pack": item.get("season_pack", 0), "upload_name": upload_name},
+            h, torrent_path, tmdb_data
+        )
+
+        if reg_result.get("success"):
+            db.execute("UPDATE scanned_items SET status = 'uploaded', error = NULL WHERE id = ?", (item["id"],))
+            reregistered += 1
+        else:
+            db.execute("UPDATE scanned_items SET status = 'error', error = ? WHERE id = ?",
+                       (f"Re-register: {reg_result.get('error', 'failed')}", item["id"]))
+
+    db.execute("INSERT INTO scan_logs (message, level) VALUES (?, ?)",
+               (f"Sync complete: {len(hashes)} checked, {len(missing_hashes)} missing, {reregistered} re-registered", "success"))
+    db.commit()
+    db.close()
+    return {"synced": len(hashes), "missing": len(missing_hashes), "reregistered": reregistered}
+
+@app.post("/api/items/{item_id}/reregister")
+async def reregister_item(item_id: int):
+    """Re-register a single item on the tracker."""
+    db = get_db()
+    item = db.execute("SELECT * FROM scanned_items WHERE id = ?", (item_id,)).fetchone()
+    if not item:
+        db.close()
+        return JSONResponse({"error": "Item not found"}, status_code=404)
+
+    if not item["torrent_hash"]:
+        db.close()
+        return JSONResponse({"error": "No torrent hash — needs full rescan"}, status_code=400)
+
+    upload_name = f"{item['title']} {item.get('year', '')}".strip()
+    torrent_filename = re.sub(r'[^\w\s-]', '', upload_name).replace(" ", "_") + ".torrent"
+    torrent_path = f"/torrents/{torrent_filename}"
+
+    if not Path(torrent_path).exists():
+        db.close()
+        return JSONResponse({"error": "Torrent file not found on disk"}, status_code=400)
+
+    tmdb_data = {"id": item["tmdb_id"]} if item["tmdb_id"] else None
+
+    reg_result = await register_on_tracker(
+        {"title": item["title"], "year": item["year"], "category": item["category"],
+         "resolution": item["resolution"], "size": item["size"],
+         "season": item["season"], "episode": item["episode"],
+         "season_pack": item["season_pack"], "upload_name": upload_name},
+        item["torrent_hash"], torrent_path, tmdb_data
+    )
+
+    if reg_result.get("success"):
+        db.execute("UPDATE scanned_items SET status = 'uploaded', error = NULL, uploaded_at = ? WHERE id = ?",
+                   (datetime.now().isoformat(), item_id))
+        db.commit()
+        db.close()
+        return {"status": "registered", "tracker_id": reg_result.get("id")}
+    else:
+        db.execute("UPDATE scanned_items SET status = 'error', error = ? WHERE id = ?",
+                   (f"Re-register: {reg_result.get('error', 'failed')}", item_id))
+        db.commit()
+        db.close()
+        return JSONResponse({"error": reg_result.get("error", "Registration failed")}, status_code=400)

@@ -148,6 +148,18 @@
         .tracker-stat__value { font-size:16px; font-weight:800; }
         .tracker-stat__label { font-size:9px; color:#5a5a7a; text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
 
+        /* ── Action Buttons ── */
+        .btn-action { width:26px; height:26px; border-radius:6px; border:1px solid #1e1e3a; background:rgba(255,255,255,0.03); color:#6a6a8a; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:10px; transition:all 0.15s; margin-left:4px; }
+        .btn-action:hover { background:rgba(74,144,217,0.15); color:#4a90d9; border-color:rgba(74,144,217,0.3); }
+        .btn-action--del:hover { background:rgba(233,69,96,0.15); color:#e94560; border-color:rgba(233,69,96,0.3); }
+
+        /* ── Toast ── */
+        .toast { position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:200; animation:slideIn 0.3s; }
+        .toast--success { background:rgba(0,210,106,0.15); color:#00d26a; border:1px solid rgba(0,210,106,0.3); }
+        .toast--error { background:rgba(233,69,96,0.15); color:#e94560; border:1px solid rgba(233,69,96,0.3); }
+        .toast--info { background:rgba(74,144,217,0.15); color:#4a90d9; border:1px solid rgba(74,144,217,0.3); }
+        @keyframes slideIn { from { transform:translateX(100px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+
         /* ── Scrollbar ── */
         ::-webkit-scrollbar { width:6px; }
         ::-webkit-scrollbar-track { background:#0a0a0f; }
@@ -482,6 +494,7 @@
             </div>
             <div class="scan-btns">
                 <button class="btn btn--ghost" onclick="resetAll()" title="Clear scan history"><i class="fas fa-trash-alt"></i></button>
+                <button class="btn btn--ghost" id="syncBtn" onclick="syncTracker()" title="Check tracker for deleted torrents and re-register them"><i class="fas fa-sync-alt"></i> Sync</button>
                 <button class="btn btn--primary" id="scanBtn" onclick="startScan()" {% if scan_state.running %}disabled{% endif %}>
                     <i class="fas fa-{% if scan_state.running %}spinner fa-spin{% else %}play{% endif %}"></i>
                     {% if scan_state.running %}Scanning...{% else %}Start Scan{% endif %}
@@ -518,11 +531,12 @@
                             <th>Size</th>
                             <th>Resolution</th>
                             <th>Status</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody id="activityBody">
                         {% for item in recent %}
-                        <tr class="activity-row" data-cat="{{ item.category }}" data-status="{{ item.status }}">
+                        <tr class="activity-row" data-cat="{{ item.category }}" data-status="{{ item.status }}" data-id="{{ item.id }}">
                             <td>
                                 <div class="item-name">{{ item.title or item.name }}</div>
                                 <div class="item-meta">{{ item.year or '' }}{% if item.tmdb_id %} &middot; TMDB #{{ item.tmdb_id }}{% endif %}</div>
@@ -547,6 +561,12 @@
                             <td>
                                 <span class="badge badge--{{ item.status }}">{{ item.status|capitalize }}</span>
                                 {% if item.error %}<div style="font-size:9px; color:#e94560; margin-top:2px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ item.error }}">{{ item.error }}</div>{% endif %}
+                            </td>
+                            <td style="white-space:nowrap;">
+                                {% if item.status in ('error', 'skipped') %}
+                                <button class="btn-action" onclick="reregister({{ item.id }}, this)" title="Re-register on tracker"><i class="fas fa-redo"></i></button>
+                                {% endif %}
+                                <button class="btn-action btn-action--del" onclick="deleteItem({{ item.id }}, this)" title="Remove from list"><i class="fas fa-times"></i></button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -578,6 +598,63 @@
     </div>
 
     <script>
+        // ── Toast ──
+        function showToast(msg, type = 'info') {
+            const t = document.createElement('div');
+            t.className = 'toast toast--' + type;
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 4000);
+        }
+
+        // ── Re-register single item ──
+        async function reregister(id, btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            try {
+                const resp = await fetch('/api/items/' + id + '/reregister', { method: 'POST' });
+                const data = await resp.json();
+                if (resp.ok) {
+                    showToast('Re-registered successfully!', 'success');
+                    const row = btn.closest('tr');
+                    row.querySelector('.badge').className = 'badge badge--uploaded';
+                    row.querySelector('.badge').textContent = 'Uploaded';
+                    btn.remove();
+                } else {
+                    showToast('Failed: ' + (data.error || 'Unknown error'), 'error');
+                    btn.innerHTML = '<i class="fas fa-redo"></i>';
+                    btn.disabled = false;
+                }
+            } catch(e) { showToast('Network error', 'error'); btn.innerHTML = '<i class="fas fa-redo"></i>'; btn.disabled = false; }
+        }
+
+        // ── Delete item from list ──
+        async function deleteItem(id, btn) {
+            try {
+                await fetch('/api/items/' + id, { method: 'DELETE' });
+                btn.closest('tr').remove();
+            } catch(e) {}
+        }
+
+        // ── Sync with Tracker ──
+        async function syncTracker() {
+            const btn = document.getElementById('syncBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+            try {
+                const resp = await fetch('/api/sync', { method: 'POST' });
+                const data = await resp.json();
+                if (data.error) {
+                    showToast('Sync error: ' + data.error, 'error');
+                } else {
+                    showToast('Sync: ' + data.synced + ' checked, ' + data.missing + ' missing, ' + data.reregistered + ' re-registered', data.missing > 0 ? 'info' : 'success');
+                    if (data.reregistered > 0) setTimeout(() => location.reload(), 2000);
+                }
+            } catch(e) { showToast('Sync failed', 'error'); }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync';
+        }
+
         // ── Reset ──
         async function resetAll() {
             if (!confirm('Clear all scan history? This will NOT remove torrents from EchelonHD or qBittorrent.')) return;
