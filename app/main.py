@@ -365,6 +365,36 @@ async def register_on_tracker(item: dict, torrent_hash: str, torrent_path: str, 
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+# ── Port Sync ──
+
+_last_synced_port = {"port": None}
+
+async def port_sync_loop():
+    """Background task: read Gluetun forwarded port and update qBit listening port."""
+    import logging
+    log = logging.getLogger("uvicorn.error")
+    while True:
+        try:
+            port_file = Path("/gluetun/forwarded_port")
+            if port_file.exists():
+                new_port = port_file.read_text().strip()
+                if new_port and new_port != _last_synced_port["port"]:
+                    await asyncio.sleep(10)  # Wait for qBit to be ready
+                    import qbittorrentapi
+                    client = qbittorrentapi.Client(host=CONFIG["qbit_url"], username=CONFIG["qbit_user"], password=CONFIG["qbit_pass"])
+                    client.auth_log_in()
+                    client.app_set_preferences(prefs={"listen_port": int(new_port)})
+                    _last_synced_port["port"] = new_port
+                    log.info(f"[port-sync] qBit listening port set to {new_port}")
+        except Exception as e:
+            import logging
+            logging.getLogger("uvicorn.error").warning(f"[port-sync] Failed: {e}")
+        await asyncio.sleep(30)
+
+@app.on_event("startup")
+async def start_port_sync():
+    asyncio.create_task(port_sync_loop())
+
 # ── Background Scanner ──
 
 scan_state = {"running": False, "progress": 0, "total": 0, "current": "", "last_scan": None}
