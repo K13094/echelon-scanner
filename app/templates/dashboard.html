@@ -153,10 +153,15 @@
                 <div class="scan-bar"><div class="scan-bar__fill" id="scanBar" style="width:{% if scan_state.total > 0 %}{{ (scan_state.progress / scan_state.total * 100)|int }}%{% else %}0%{% endif %};"></div></div>
                 <div class="scan-info" id="scanInfo">{{ scan_state.current }}</div>
             </div>
-            <button class="scan-btn" id="scanBtn" onclick="startScan()" {% if scan_state.running %}disabled{% endif %}>
-                <i class="fas fa-{% if scan_state.running %}spinner fa-spin{% else %}radar{% endif %}"></i>
-                {% if scan_state.running %}Scanning...{% else %}Start Scan{% endif %}
-            </button>
+            <div style="display:flex; gap:10px;">
+                <button class="scan-btn" style="background:linear-gradient(135deg,#2a2a4a,#1a1a2e); border:1px solid #2a2a4a;" onclick="resetAll()">
+                    <i class="fas fa-trash-alt"></i> Clear History
+                </button>
+                <button class="scan-btn" id="scanBtn" onclick="startScan()" {% if scan_state.running %}disabled{% endif %}>
+                    <i class="fas fa-{% if scan_state.running %}spinner fa-spin{% else %}radar{% endif %}"></i>
+                    {% if scan_state.running %}Scanning...{% else %}Start Scan{% endif %}
+                </button>
+            </div>
         </div>
 
         <div class="two-col">
@@ -216,6 +221,12 @@
     </div>
 
     <script>
+        async function resetAll() {
+            if (!confirm('Clear all scan history? This will reset the dashboard but NOT remove torrents from EchelonHD or qBittorrent.')) return;
+            await fetch('/api/reset', { method: 'POST' });
+            location.reload();
+        }
+
         async function startScan() {
             const btn = document.getElementById('scanBtn');
             btn.disabled = true;

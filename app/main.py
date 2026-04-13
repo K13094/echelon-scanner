@@ -593,3 +593,14 @@ async def retry_item(item_id: int):
     db.commit()
     db.close()
     return {"status": "queued"}
+
+@app.post("/api/reset")
+async def reset_all():
+    """Clear all scanned items and stats — fresh start."""
+    db = get_db()
+    db.execute("DELETE FROM scanned_items")
+    db.execute("DELETE FROM stats")
+    db.execute("DELETE FROM scan_logs")
+    db.commit()
+    db.close()
+    return {"status": "reset"}
