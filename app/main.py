@@ -311,9 +311,14 @@ async def add_to_qbit(torrent_path: str, save_path: str):
         import qbittorrentapi
         client = qbittorrentapi.Client(host=CONFIG["qbit_url"], username=CONFIG["qbit_user"], password=CONFIG["qbit_pass"])
         client.auth_log_in()
-        client.torrents_add(torrent_files=torrent_path, save_path=save_path, is_skip_checking=True)
+        with open(torrent_path, "rb") as f:
+            result = client.torrents_add(torrent_files=f, save_path=save_path, is_skip_checking=True)
         return True
-    except Exception:
+    except Exception as e:
+        db = get_db()
+        db.execute("INSERT INTO scan_logs (message, level) VALUES (?, ?)", (f"qBit error: {str(e)}", "error"))
+        db.commit()
+        db.close()
         return False
 
 async def register_on_tracker(item: dict, torrent_hash: str, torrent_path: str, tmdb_data: dict = None):
